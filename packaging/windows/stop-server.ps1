@@ -6,12 +6,14 @@ $portMatch = [regex]::Match($config, '(?m)^\s*CONSOLE_PORT\s*=\s*(\d+)\s*$')
 if (-not $passwordMatch.Success -or -not $portMatch.Success) {
     throw 'CONSOLE_PASSWORD or CONSOLE_PORT is missing from tomenet.cfg.'
 }
-$taskServerId = [int][IO.File]::ReadAllText((Join-Path $ServerRoot 'lib\data\tomenet.pid')).Trim()
-$taskServerProcess = Get-Process -Id $taskServerId -ErrorAction Stop
 $expectedExecutable = Get-Item -LiteralPath (Join-Path $ServerRoot 'tomenet.server.exe')
-if ((Get-Item -LiteralPath $taskServerProcess.Path).FullName -ne $expectedExecutable.FullName) {
-    throw 'The recorded PID belongs to a different executable.'
+$matchingProcesses = @(Get-Process -Name 'tomenet.server' -ErrorAction SilentlyContinue | Where-Object {
+    $_.Path -and (Get-Item -LiteralPath $_.Path).FullName -eq $expectedExecutable.FullName
+})
+if ($matchingProcesses.Count -ne 1) {
+    throw 'Expected exactly one running server from this directory. Check its path and permissions.'
 }
+$taskServerProcess = $matchingProcesses[0]
 $client = New-Object Net.Sockets.TcpClient
 try {
     $client.Connect('127.0.0.1', [int]$portMatch.Groups[1].Value)

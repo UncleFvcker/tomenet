@@ -87,6 +87,8 @@ try:
     log = (server / "lib/data/tomenet.log").read_text(errors="replace")
     assert "packsmoke" in log.lower(), "Client did not reach the server."
     print("Packaged client started and reached the isolated server.", flush=True)
+    # Stale PID files must not block saving a live server from this directory.
+    (server / "lib/data/tomenet.pid").write_text("2147483647\n")
     windows_powershell = Path(environment["SYSTEMROOT"]) / "System32/WindowsPowerShell/v1.0/powershell.exe"
     subprocess.run([str(windows_powershell), "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
                     str(server / "stop-server.ps1")], cwd=server, env=environment, check=True, timeout=70)
