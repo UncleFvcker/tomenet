@@ -8,7 +8,8 @@ if (-not $passwordMatch.Success -or -not $portMatch.Success) {
 }
 $taskServerId = [int][IO.File]::ReadAllText((Join-Path $ServerRoot 'lib\data\tomenet.pid')).Trim()
 $taskServerProcess = Get-Process -Id $taskServerId -ErrorAction Stop
-if ($taskServerProcess.Path -ne (Join-Path ([IO.Path]::GetFullPath($ServerRoot)) 'tomenet.server.exe')) {
+$expectedExecutable = Get-Item -LiteralPath (Join-Path $ServerRoot 'tomenet.server.exe')
+if ((Get-Item -LiteralPath $taskServerProcess.Path).FullName -ne $expectedExecutable.FullName) {
     throw 'The recorded PID belongs to a different executable.'
 }
 $client = New-Object Net.Sockets.TcpClient
