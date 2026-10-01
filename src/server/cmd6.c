@@ -1293,6 +1293,21 @@ bool quaff_potion(int Ind, int tval, int sval, int pval) {
 			msg_format(Ind, "You gained %d more skill point%s.", i, (i == 1) ? "" : "s");
 			s_printf("LEARNING: %s gained %d more skill point%s.\n", p_ptr->name, i, (i == 1) ? "" : "s");
 			break;
+		case SV_POTION2_SKILL:
+			ident = TRUE;
+			if (p_ptr->skill_points == MAX_SHORT ||
+			    ((p_ptr->reskill_possible & RESKILL_F_UNDO) && p_ptr->skill_points_old == MAX_SHORT)) {
+				msg_print(Ind, "You cannot gain any more skill points.");
+				break;
+			}
+			p_ptr->skill_points++;
+			/* Keep the extra point when undoing skill allocation. */
+			if (p_ptr->reskill_possible & RESKILL_F_UNDO) p_ptr->skill_points_old++;
+			p_ptr->update |= PU_SKILL_MOD;
+			if (is_older_than(&p_ptr->version, 4, 4, 8, 5, 0, 0)) p_ptr->redraw |= PR_STUDY;
+			msg_print(Ind, "You gained 1 more skill point.");
+			s_printf("SKILL_POTION: %s gained 1 more skill point.\n", p_ptr->name);
+			break;
 		case SV_POTION2_AMBER:
 			ident = TRUE;
 			msg_print(Ind, "Your muscles bulge, and your skin turns to amber!");

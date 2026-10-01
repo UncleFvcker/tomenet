@@ -8490,7 +8490,7 @@ void move_player(int Ind, int dir, int do_pickup, char *consume_full_energy) {
 
 				/* Give him some gold to restart */
 				//if (p_ptr->lev > 1 && !p_ptr->admin_dm) {
-				if (!p_ptr->admin_dm) {
+				if (!p_ptr->admin_dm && !(p_ptr->mode & MODE_EVERLASTING)) {
 					/* int i = (p_ptr->lev > 4)?(p_ptr->lev - 3) * 100:100; */
 					//int i = (p_ptr->lev > 4)?(p_ptr->lev - 3) * 100 + (p_ptr->lev / 10) * (p_ptr->lev / 10) * 800 : 100;
 //					int i = (p_ptr->lev > 4) ? 100 + (p_ptr->lev * p_ptr->lev * p_ptr->lev) / 5 : 100;

@@ -1652,10 +1652,8 @@ They all start with a slash '/' hence they're called slash commands:
             - pvp kills;
             - the in-game time and date, and whether it is day or night.
               (Note: If you want to know the server real-life time, use /time.)
-            - An indicator if instant resurrection is enabled, and also tell
-              you your fee for the current dungeon level (red if you don't have
-              sufficient funds) or, if not in a dungeon, display the maximum
-              dungeon level your funds would suffice for.
+            - An indicator that Everlasting resurrection is always active and
+              free on every floor.
             - How many houses you own and how many more you may own.
             - Your chance of parrying and blocking.
             - how much more gold you may pick up before your character will
@@ -3864,8 +3862,9 @@ About Morgoth:
 Morgoth, the god of destruction, has reinforced his surroundings to be
 especially devastating to all living beings:
 If you get killed on a level where Morgoth, Lord of Darkness walks, your
-ghost will be destroyed too, even if you are everlasting! Beware! Even after
-Morgoth is no longer there the floor will still keep this deadly property.
+ghost will be destroyed too, unless you are everlasting. Everlasting players
+revive in town for free with all items, experience, money and royal status.
+Even after Morgoth is gone the deadly property remains for other modes.
 You will get a floor feeling warning you whenever you enter a floor where
 Morgoth resides, see (4.8).
 Note that on a floor where Morgoth currently resides, all vaults will turn into
@@ -3955,7 +3954,8 @@ See the following paragraph (1.3b) for more information on Morgoth.
  -Extra artifact creation scrolls for every player more than two (so trio+).
 -There are no obstacles that can hold Morgoth back for long.
 -All vaults on Morgoth's floor will be no-teleport vaults.
--If you die on Morgoth's floor your character is deleted even if everlasting!
+-If you die on Morgoth's floor your character is deleted unless everlasting.
+ Everlasting players revive in town without any death penalty.
  You will get a floor feeling to warn you of this whenever you enter a floor
  where Morgoth resides on, see (4.8).
 
@@ -5917,21 +5917,21 @@ standard is 3 lifes.
 
 Everlasting (infinite resurrections)
 ------------------------------------
-Create an everlasting character for an infinite amount of resurrections (with
-the exception that they too are completely destroyed if they die to insanity.)
+Create an everlasting character for automatic, free resurrection in town.
+Death never costs experience, money, inventory, equipment or royal status.
+This applies on all floors, including Morgoth's floor, hellish/ironman areas
+and the Nether Realm, and also to insanity or the death of an existing ghost.
+Suicide/retirement still permanently deletes the character.
 Everlasting characters can become king/queen, but cannot enter the high-score.
 Other character types cannot use items that belong to everlasting
 characters. Exception: Word of Recall scrolls can be exchanged between an
 everlasting and a non-everlasting player!
 Non-everlasting and everlasting characters can't be in the same party.
-If an everlasting King/Queen dies, he won't be destroyed but lose the
-King/Queen status. To regain it, he needs to find another player who hasn't
-defeated Sauron and Morgoth yet and team up with him, because those two won't
-(re)spawn for the everlasting player.
+An everlasting King/Queen keeps royal status, Morgoth's crown and Grond on death.
 Since it was often asked: Non-everlasting and everlasting players can revive
 each other without problems.
-Everlasting characters can additionally use the 'Instant Resurrection' feature
-offered by town temples, see (4.5a).
+Resurrection is always active for everlasting characters; no temple toggle or
+minimum balance is required. See (4.5a).
 
 Unworldly (no-ghost)
 --------------------
@@ -6976,11 +6976,7 @@ Heavy armour and weaponry also sells for good cash, again make sure to always
 identify any item that gets pseudo-identified (aka 'felt') as {good} so you
 will receive the full worth of its enchantments and not just the base price.
 
-Money is vital if you are everlasting mode and have the 'instant resurrection'
-feature enabled in the temple: It costs a fee to activate when you die. If you
-don't have enough money (your carried money and your banked money is added up
-for this, so you don't have to worry about how it is distributed) then you will
-not get auto-resurrected and instead just turn into a ghost.
+Everlasting resurrection is free even if both your purse and bank are empty.
 
 
 
@@ -8284,8 +8280,7 @@ Depending on how a player died, there are different kinds of death messages:
   This is like suicide, but what happens if winners attempt to suicide:
   They simply retire. The character is deleted permanently same as suiciding.
 - "was defeated by"
-  The everlasting player was killed but got auto-resurrected because he had
-  the "instant resurrection" feature enabled in a temple.
+  The everlasting player was killed and automatically revived in town for free.
 - "was killed by"
   The player was killed.
   If the message is enclosed in asterisk pairs, it was a permanent (no-ghost)
@@ -8318,15 +8313,15 @@ Also, a screenshot is made automatically, displaying your situation, saved
 to '<charname>-death-screenshot.xhtml'.
 (You can view xhtml files in most webbrowsers.)
 
-Normal/everlasting characters will turn into ghosts if they die. When you
+Normal characters will turn into ghosts if they die. When you
 become a ghost, your title will change to 'Ghost' until you get revived.
 Depending on the server configuration, ghosts of a 'normal mode' player
 can usually be resurrected only 2 times, so a normal player has 3 lives
 before permanently biting it.
 Unworldly/hellish characters don't have a ghost and are completely destroyed
 if they die.
-Everlasting characters may also use the 'Instant Resurrection' feature offered
-by town temples, see (4.5a), which will avoid turning into a ghost.
+Everlasting characters automatically revive in town without becoming ghosts
+or suffering any death penalty, including on Morgoth's floor. See (4.5a).
 
 Ghosts are very fragile, but can pass solid walls, float up and down freely
 using the < and > keys, their melee attacks can cause fear and they gain a few
@@ -8371,7 +8366,8 @@ Notes: If a player enters a static-by-death floor, the floor timer will be
 
 What happens to your loot
 -------------------------
-If you die, all of your items are dropped to the floor at the place of your
+The following loot penalties do not apply to everlasting characters.
+If you die in another mode, your items are dropped at the place of your
 death. Additionally, 0-4 random items from your inventory and sometimes even
 one random item from your equipment might get destroyed on death, but most of
 it is waiting for you to pick it up again after someone came and revived you.
@@ -8394,13 +8390,9 @@ Last but not least, non-validated players and characters below level 3 don't
 drop their items on death, their loot will vanish forever. (The level depends
 on server settings, so check them via ~i to verify.)
 
-If you are an everlasting-mode player you can enable 'instant resurrection' in
-any town's temple (see (4.5a)) in which case you will not drop your items on
-death but just respawn near the temple on death, provided you had enough funds
-at the time of death to pay the fee of getting automatically resurrected.
-The usual loss of 0-4 inventory items and sometimes one equipment piece will
-still occur though as it cannot be avoided. And the experience loss is even
-greater with instant resurrection than with normal deaths.
+Everlasting players respawn near their bound town's temple for free, keeping
+all inventory, equipment, bag contents, experience, gold and royal status.
+Items are neither dropped nor destroyed. No service needs to be enabled.
 
 
 Ghosts
@@ -8416,7 +8408,9 @@ very deep dungeon levels which he hadn't visited yet when he was still alive.
 So 'Ghost-Diving' (means: simply continuing playing as a ghost) is somewhat
 limited there.
 
-That will bring you back to life at the cost of experience (35% usually).
+That brings non-everlasting ghosts back at the cost of experience (35% usually).
+Existing everlasting ghosts lose no experience from fading or resurrection
+and receive no revival money from the temple.
 There are 3 ways to be revived:
 
 -the ghost can visit a temple (green '4' in town). The temple priest will also
@@ -8879,9 +8873,9 @@ staircase colours (also visible on the world map):
  dungeon, similar to ironman (except for the no-ghost death penalty).
  Force-down dungeons/towers are marked by a light red < or > symbol.
 
--Hellish. Players suffer no-ghost deaths inside hellish dungeons.
- Even if they're everlasting, meaning that if you die in such a dungeon or
- tower you won't turn into a ghost either but get destroyed completely.
+-Hellish. Non-everlasting players suffer no-ghost deaths inside hellish dungeons.
+ Everlasting players instead revive in town for free, keeping all progress
+ and possessions, as on any other floor.
  Hellish dungeons/towers are marked by a fire-like flickering < or > symbol
  (red/yellow).
 
@@ -9198,45 +9192,15 @@ Temple          4       Player ghosts will be revived here, and receive some
                         The temple priest will also attempt to cure, heal or
                         feed you if you enter the temple in bad condition.
 
-                        Since 4.4.9 the temple also offers you to toggle
-                        'Instant Resurrection', a new feature that is only
-                        available for everlasting players and will immediately
-                        resurrect a player at the temple when he dies, removing
-                        the need to wait for some other player to come and
-                        rescue him. In turn, the experience penalty will be
-                        50% instead of the usual 35%. Insta-res also keeps all
-                        your items except for the usual chance to lose a few of
-                        them on death, which is the same as for normal deaths.
-                        However, the player will need to have enough cash to
-                        pay an instant resurrection fee when he dies, which is:
-                        Dungeonlevel * dungeonlevel * 10 + 10 gold pieces.
-                        Eg at -50ft Orc Cave it's 10 * 10 * 10 + 10 = 1010 Au.
-                        The money is automatically deducted from the purse or
-                        the bank account as required. If the player does not
-                        have enough money in total then resurrection will fail
-                        and the player will remain a ghost in the dungeon as
-                        usual when not using instant resurrection.
-                        Instant resurrection does not work in no-ghost dungeons
-                        (ie ironman or hellish) and dungeon levels (ie floors
-                        where Morgoth is) or in the Nether Realm.
-                        You can use the /ex command to check whether instant
-                        resurrection is enabled, it will tell you if so. Then
-                        it will additionally display the fee needed for your
-                        current dungeon level, displayed in red if you don't
-                        have enough funds. Or if you aren't in a dungeon it
-                        will instead display the maximum dungeon level your
-                        current funds would suffice for.
-
-                        Some example fees for quick reference:
-                        Barrow-Downs -1000 ft     4010 Au
-                        Barrow-Downs bottom      12260 Au
-                        Orc Caves bottom          5300 Au
-                        Mordor bottom            43570 Au
-                        Mount Doom bottom        98020 Au
-                        Angband bottom          161300 Au
-                        Cloud Planes top        222020 Au
-                        Nether Realm -50 ft     275570 Au
-                        Nether Realm bottom     384170 Au
+                        Everlasting players automatically resurrect in town
+                        for free. This is always active and applies to every
+                        floor, including Morgoth's floor and the Nether Realm.
+                        No money, experience, equipment, inventory or royal
+                        status is lost. The temple's resurrection action and
+                        the /ex command explain this protection.
+                        Existing everlasting ghosts can also revive for free,
+                        but receive no revival money. Suicide/retirement still
+                        permanently deletes the character.
 
 Alchemy Shop    5       Sells various scrolls and potions.
 
@@ -10038,7 +10002,7 @@ the game. For more information, see (4.13), Ironman Challenge.
   be entered via Word of Recall (you may recall out of it though).
  -Note that the amount of experience is already very high even without this
   depth-bonus, since creatures in the Nether Realm are of a very high level.
- -Instant resurrection does not work in the Nether Realm.
+ -Everlasting resurrection is free and works in the Nether Realm too.
  -It is possible for everlasting and non-everlasting characters who usually
   cannot form a party to actually team up in the Nether Realm! This is called a
   cross-mode party, for more information see (3.4d).
@@ -11929,8 +11893,9 @@ Ironman Deep Dive Challenge (IDDC):
 -----------------------------------
 This is a permanent, special, gigantic ironman dungeon (or tower) that you may
 attempt to conquer by reaching the final floor or killing Morgoth and then
-recalling out. It allows traversing only in one direction and if you die you
-die permanently even if you are everlasting!
+recalling out. It allows traversing only in one direction. Non-everlasting
+characters die permanently here; everlasting characters revive in town for
+free. Death recovery does not count as conquering the challenge.
 Originally there was a specific "RPG Server" I created as a stand-alone server
 for a few years, which was then abolished and inspired this single dungeon
 instead. For those who wish to play more 'ironish' even outside of the IDDC,
@@ -14899,6 +14864,9 @@ Invulnerability
                 ("A powerful iridescent shield forms around your body!")
 
 Learning        Gives you 1..3 (random) additional skill points to spend.
+
+Skill           Gives you exactly 1 additional skill point to spend.
+                Found at the same depths and rarity as stat-increasing potions.
 
 Life            Heals 700 HP, removes blindness/confusion/stun, cures
                 poison/disease/cuts/hallucinations, cures Black Breath,
@@ -22050,14 +22018,14 @@ don't really exist and things that do exist become unrecognizable. They will
 also hinder your character's abilities in various ways, for example you become
 unable to target anything.
 
-If your character loses all sanity ie turns completely insane, you will
-permanently die - even if you are everlasting-mode! Your character will be gone
-and erased.
+If a non-everlasting character loses all sanity, it dies permanently and is
+erased. Everlasting characters instead revive in town for free with sanity
+restored and all progress and possessions retained.
 
 Your sanity, displayed as 'SN:', can have the following text 'values' depending
 on how much sanity you have left:
 Sound (90%+), Sane (75%+), Weird (50%+), Crazy (25%+), Insane (10%+), Mad (>0%)
-and finally Vegetable (0%, you are permanently dead).
+and finally Vegetable (0%, permanent death unless everlasting).
 
 If you spend 10 points on your 'Health' skill, the sanity display will turn
 into a bar, displaying exacter values. At 20 points you'll get the percentage
@@ -27449,8 +27417,8 @@ attack or flee.
 In my opinion playing TomeNET can be called "the art not to die".
 
 Notes:
- - As an everlasting character you can somewhat cheat death by activating
-   "Instant Resurrection" in any temple, see (4.5a) for details and drawbacks.
+ - Everlasting characters always revive in town for free without death
+   penalties, including on Morgoth's floor. See (4.5a).
  - You can use the  /page  command to get someone's attention if he seems afk
    and you need his help. This command will make his game client beep 3 times.
 

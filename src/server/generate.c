@@ -733,6 +733,7 @@ void place_fountain(struct worldpos *wpos, int y, int x) {
 				break;
 			case SV_POTION2_CURE_CRITICAL_SANITY:
 			case SV_POTION2_CURE_SANITY:
+			case SV_POTION2_SKILL:
 				cs_ptr->sc.fountain.rest = 1;
 				break;
 			case SV_POTION2_LEARNING:

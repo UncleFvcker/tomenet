@@ -36,13 +36,11 @@ Well, there's roughly 3 ways a ghost might wish to take:
 When you're resurrected, you'll lose 40% of your experience points (or slightly
 less if a fellow player resurrected you by the priest spell 'Resurrection').
 
-If you are an 'everlasting' character you can actually avoid turning into a
-ghost on death and instead respawn back in town right away. To do this, visit
-your local temple and enable its 'instant resurrection' feature.
-That way, when you die you will not come into a situation where you might have
-to leave all your items behind and you won't risk destruction of your ghost.
-The drawback is that this service costs a fee and the experience loss is a
-hefty 50%. See (4.5a) in the guide for details.
+Everlasting characters automatically revive in town for free on every floor,
+including Morgoth's floor and the Nether Realm. No service needs to be enabled.
+All experience, money, inventory, equipment, bag contents and royal status are
+retained. Existing everlasting ghosts lose no experience on resurrection or
+from fading. Suicide/retirement still deletes the character. See (4.5a).
 
 
 Better luck next time...

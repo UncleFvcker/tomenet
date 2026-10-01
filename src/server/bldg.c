@@ -3080,24 +3080,11 @@ bool bldg_process_command(int Ind, store_type *st_ptr, int action, int item, int
 			msg_print(Ind, "\377oThis feature requires at least client 4.4.6b");
 		break;
 	case BACT_INSTANT_RES:
-#ifdef ENABLE_INSTANT_RES
 		if (p_ptr->mode & MODE_EVERLASTING) {
-			if (p_ptr->insta_res) {
-				p_ptr->insta_res = FALSE;
-				msg_print(Ind, "\377rYou decide that you do not require the Instant Resurrection service!");
-			} else {
-				//int instant_res_cost = p_ptr->lev * p_ptr->lev * 10 + 10;
-
-				p_ptr->insta_res = TRUE;
-				msg_print(Ind, "\377GYou engage the Instant Resurrection service.");
-				//msg_format(Ind, "(At depth %d it would cost \377%c%d\377- Au.)", p_ptr->lev, (instant_res_cost > p_ptr->au + p_ptr->balance) ? 'R' : 'w', instant_res_cost);
-			}
+			msg_print(Ind, "\377GEverlasting resurrection is always active and free, on every floor.");
 		} else {
 			msg_print(Ind, "\377oInstant Resurrection is only available to everlasting characters.");
 		}
-#else
-		msg_print(Ind, "\377oInstant Resurrection has not been enabled on this server.");
-#endif
 		break;
 	case BACT_EXPLORATIONS:
 		view_exploration_records(Ind);

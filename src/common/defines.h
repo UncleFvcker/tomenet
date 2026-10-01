@@ -4695,12 +4695,9 @@
 #define SV_POTION2_LEARNING		20
 
 #define SV_POTION2_AMBER		21	/* artifact potion */
+#define SV_POTION2_SKILL		22
 
-#ifndef EXPAND_TV_POTION
- #define SV_POTION2_LAST		21
-#else
- #define SV_POTION2_LAST		0
-#endif
+#define SV_POTION2_LAST		SV_POTION2_SKILL
 
 /* sval for TV_FLASK */
 /* note: there is only 1 flask, ie flask of oil.

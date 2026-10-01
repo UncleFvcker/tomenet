@@ -26,7 +26,7 @@ Party members should not wander off but stick together to survive!
 Have a suggestion or bug report? Please use the /rfe or /bug command!
 Stores in higher-level towns usually offer higher-level spells more often!
 Press Shift+i to inspect an item (or 'x' to inspect a store item)!
-The temples offer 'Instant Resurrection' for everlasting characters, at a cost!
+Everlasting characters always revive in town for free, without death penalties!
 Never use your best artifacts for fighting Nazgul!
 Keep the empty bottle when drinking a potion to refill it at a fountain.
 They say that Death Fate is preferable to suicide.

@@ -2993,7 +2993,7 @@ static void process_world_player(int Ind) {
 	}
 
 #ifdef GHOST_FADING
-	if (p_ptr->ghost && !p_ptr->admin_dm &&
+	if (p_ptr->ghost && !p_ptr->admin_dm && !(p_ptr->mode & MODE_EVERLASTING) &&
 	    //!(turn % GHOST_FADING))
 	    //!(turn % ((5100L - p_ptr->lev * 50) * GHOST_FADING)))
 	    !(turn % ((GHOST_FADING * 50) / p_ptr->lev)))
@@ -4454,8 +4454,10 @@ void recall_player(int Ind, char *message) {
 		p_ptr->wild_map[(p_ptr->wpos.wx + p_ptr->wpos.wy * MAX_WILD_X) / 8] |=
 		    (1U << ((p_ptr->wpos.wx + p_ptr->wpos.wy * MAX_WILD_X) % 8));
 
+	/* Death recovery leaves the challenge without awarding completion. */
+	if (p_ptr->new_level_method == LEVEL_TO_TEMPLE) p_ptr->IDDC_flags = 0;
 	/* Did we really make it through all floors of the ironman challenge dungeon? */
-	if (in_irondeepdive(&old_wpos) && !is_admin(p_ptr)) {
+	if (in_irondeepdive(&old_wpos) && !is_admin(p_ptr) && p_ptr->new_level_method != LEVEL_TO_TEMPLE) {
 		int i, j;
 
 #ifdef IRONDEEPDIVE_FIXED_TOWN_WITHDRAWAL
@@ -4623,7 +4625,7 @@ void recall_player(int Ind, char *message) {
 	/* Specialty: Did we make it through the Halls of Mandos?
 	   Those are now ironman, so they're a 'pure', traditional ironman challenge.
 	   However, this dungeon can be entered at any level, so it might be less of a challenge. */
-	if (in_hallsofmandos(&old_wpos) && !is_admin(p_ptr)) {
+	if (in_hallsofmandos(&old_wpos) && !is_admin(p_ptr) && p_ptr->new_level_method != LEVEL_TO_TEMPLE) {
 		msg_print(Ind, "\374\377a***\377sYou made it through the Halls of Mandos!\377a***");
 		sprintf(buf, "\374\377a***\377s%s made it through the Halls of Mandos!\377a***", p_ptr->name);
 		msg_broadcast(Ind, buf);

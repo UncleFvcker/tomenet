@@ -35,11 +35,6 @@
 #define XP_DRAIN_RECOVERY 10
 
 /*
- * What % of exp points will be lost on instant resurrection?
- */
-#define INSTANT_RES_XP_LOST	50
-
-/*
  * Chance of an item teleporting away when player dies, in percent. [10]
  * This is to balance death penalty after item stacking was implemented.
  * To disable, comment it out.
@@ -9687,6 +9682,46 @@ static void display_diz_death(int Ind) {
 /* Special message for deaths by Farmer Maggot's dogs?
    %-chance to get displayed, otherwise the usual last_words from death.txt is shown. */
 #define WHO_LET_THE_DOGS_OUT 100
+
+/* Shared recovery for ordinary and safe Everlasting deaths. */
+static void recover_everlasting(int Ind) {
+	player_type *p_ptr = Players[Ind];
+
+	if (p_ptr->image) (void)set_image(Ind, 0);
+	if (p_ptr->blind) (void)set_blind(Ind, 0);
+	if (p_ptr->paralyzed) (void)set_paralyzed(Ind, 0);
+	if (p_ptr->confused) (void)set_confused(Ind, 0);
+	if (p_ptr->poisoned) (void)set_poisoned(Ind, 0, 0);
+	if (p_ptr->diseased) (void)set_diseased(Ind, 0, 0);
+	if (p_ptr->stun) (void)set_stun(Ind, 0);
+	if (p_ptr->cut) (void)set_cut(Ind, -10000, 0, FALSE);
+	(void)set_food(Ind, PY_FOOD_FULL - 1);
+	p_ptr->black_breath = FALSE;
+	p_ptr->ghost = 0;
+	p_ptr->death = FALSE;
+
+	p_ptr->safe_sane = TRUE;
+	p_ptr->update |= PU_BONUS | PU_HP | PU_SANITY;
+	update_stuff(Ind);
+	p_ptr->safe_sane = FALSE;
+	p_ptr->chp = p_ptr->mhp;
+	p_ptr->chp_frac = 0;
+	p_ptr->csane = p_ptr->msane;
+	p_ptr->csane_frac = 0;
+	p_ptr->redraw |= PR_BASIC | PR_HP | PR_SANITY | PR_GOLD | PR_DEPTH;
+	p_ptr->window |= PW_INVEN | PW_EQUIP;
+	Send_playerlist(0, Ind, 2);
+#ifdef USE_SOUND_2010
+	p_ptr->music_current = 0;
+#endif
+
+	p_ptr->recall_pos.wx = p_ptr->town_x;
+	p_ptr->recall_pos.wy = p_ptr->town_y;
+	p_ptr->recall_pos.wz = 0;
+	p_ptr->new_level_method = LEVEL_TO_TEMPLE;
+	recall_player(Ind, "\377GYou are revived in town without losing anything.");
+}
+
 void player_death(int Ind) {
 	player_type *p_ptr = Players[Ind], *p_ptr2 = NULL;
 	connection_t *connp = NULL;
@@ -9712,13 +9747,14 @@ void player_death(int Ind) {
 #endif
 	bool just_fruitbat_transformation = (p_ptr->fruit_bat == -1);
 	bool in_iddc = in_irondeepdive(&p_ptr->wpos);
+	bool everlasting = (p_ptr->mode & MODE_EVERLASTING) && !p_ptr->suicided;
 	object_type *inventory_copy;
 	struct timeval now;
 	long delta_sec, delta_usec;
 
 	/* If client has been silent for over 2 seconds, treat the death as disconnect-related:
 	   skip normal death penalties and move the player to recall position. */
-	if (p_ptr->conn != NOT_CONNECTED && Conn[p_ptr->conn]) {
+	if (!everlasting && !p_ptr->suicided && p_ptr->conn != NOT_CONNECTED && Conn[p_ptr->conn]) {
 		connp = Conn[p_ptr->conn];
 		gettimeofday(&now, NULL);
 		delta_sec = now.tv_sec - connp->last_keepalive_recv.tv_sec;
@@ -9905,7 +9941,7 @@ void player_death(int Ind) {
 			   a lost fight now cannot be abused to collect shards via cheap blood-gating. */
 
 			/* 1/2 - Scan him */
-			for (i = 0; i <= INVEN_PACK; i++) {
+			for (i = 0; !everlasting && i <= INVEN_PACK; i++) {
 				o_ptr = &p_ptr->inventory[i];
 				if (o_ptr->tval == TV_JUNK && o_ptr->sval == SV_GLASS_SHARD) {
 					msg_format(Ind, "\377o%s shatters...", o_ptr->number != 1 ? "One of your glass shards" : "Your glass shard");
@@ -9918,7 +9954,7 @@ void player_death(int Ind) {
 			}
 
 			/* 2/2 - Scan the floor -- obsolete as you cannot drop items in DF anyway */
-			if (!found && l_ptr && zcave) {
+			if (!everlasting && !found && l_ptr && zcave) {
 				for (x = 1; x < l_ptr->wid - 1; x++) {
 					for (y = 1; y < l_ptr->hgt - 1; y++) {
 						oidx = zcave[y][x].o_idx;
@@ -10033,9 +10069,9 @@ void player_death(int Ind) {
 	Handle_clear_buffer(Ind);
 
 	/* NO_DEATH / safe death / Hack -- amulet of life saving -> no death message! (Except for AMC) */
-	if (!p_ptr->suicided && !erase && (secure ||
+	if (!p_ptr->suicided && !erase && (secure || (!everlasting &&
 	    (p_ptr->inventory[INVEN_NECK].k_idx &&
-	    p_ptr->inventory[INVEN_NECK].sval == SV_AMULET_LIFE_SAVING))) {
+	    p_ptr->inventory[INVEN_NECK].sval == SV_AMULET_LIFE_SAVING)))) {
 		s_printf("%s - %s (%d%s) was pseudo-killed by %s for %d damage at %d, %d, %d.\n", time_str, p_ptr->name, p_ptr->lev, p_ptr->admin_dm ? " DM" : (p_ptr->admin_wiz ? " DW" : ""), p_ptr->really_died_from, p_ptr->deathblow, p_ptr->wpos.wx, p_ptr->wpos.wy, p_ptr->wpos.wz);
 
 		if (!secure) {
@@ -10059,7 +10095,7 @@ void player_death(int Ind) {
 		(void)set_food(Ind, PY_FOOD_FULL - 1);
 
 		/* Teleport him */
-		teleport_player(Ind, 200, TRUE);
+		if (!everlasting) teleport_player(Ind, 200, TRUE);
 
 		/* Remove the death flag */
 		p_ptr->death = FALSE;
@@ -10108,10 +10144,10 @@ void player_death(int Ind) {
 					msg_broadcast_format(0, "\374\377A** %s didn't survive! **", p_ptr->name);
 					s_printf("EVENT_RESULT: %s (%d) was defeated (%d damage).\n", p_ptr->name, p_ptr->lev, p_ptr->deathblow);
 				}
-				recall_player(Ind, "\377oYou die.. at least it felt like you did..!");
+				if (!everlasting) recall_player(Ind, "\377oYou die.. at least it felt like you did..!");
 			}
 			else {
-				if (penalty) {
+				if (penalty && !everlasting) {
 					/* Lose either inventory or equipment, less severe than normal death */
 #if 1
  #ifdef DEATH_PACK_ITEM_LOST
@@ -10126,12 +10162,12 @@ void player_death(int Ind) {
 #endif
 					recall_player(Ind, "\377oYour mind is hazy.. you feel like you woke up from a dream!");
 				}
-				else recall_player(Ind, "\377oYou almost died.. but your life was secured here!");
+				else if (!everlasting) recall_player(Ind, "\377oYou almost died.. but your life was secured here!");
 			}
 
 			p_ptr->safe_sane = TRUE;
 			/* Apply small penalty for death -- This is what happens in the Training Tower for example */
-			if (!ge_secure) { /* ..if we weren't in a special event that protects */
+			if (!ge_secure && !everlasting) { /* ..if we weren't in a special event that protects */
 #ifndef ARCADE_SERVER
 				p_ptr->au = p_ptr->au * 4 / 5;
 				p_ptr->max_exp = (p_ptr->max_exp * 4 + 1) / 5; /* never drop below 1! (Highlander Tournament exploit) */
@@ -10142,7 +10178,7 @@ void player_death(int Ind) {
 				if (p_ptr->csane <= 10) p_ptr->csane = 10; /* just something, paranoia */
 #endif
 			}
-			check_experience(Ind);
+			if (!everlasting) check_experience(Ind);
 
 			/* update stats */
 			p_ptr->update |= PU_SANITY;
@@ -10158,6 +10194,7 @@ void player_death(int Ind) {
 		}
 
 		/* Wow! You may return!! */
+		if (everlasting) recover_everlasting(Ind);
 		if (!ge_secure) p_ptr->soft_deaths++; /* Note: no diz_death here actually */
 #ifdef TEST_SERVER /* ..only on test server for testing actually */
 #ifdef RACE_DIZ
@@ -10204,9 +10241,15 @@ void player_death(int Ind) {
 		s_printf("Somethin weird with %s. GET is %d\n", p_ptr->name, p_ptr->global_event_temp);
 		msg_broadcast(0, "Uh oh, somethin's not right here.");
 	}
-	if ((p_ptr->global_event_temp & PEVF_SAFEDUN_00) && p_ptr->csane >= 0 && in_sector000_dun(&p_ptr->wpos) && !p_ptr->suicided) {
+	if ((p_ptr->global_event_temp & PEVF_SAFEDUN_00) && (everlasting || p_ptr->csane >= 0) && in_sector000_dun(&p_ptr->wpos) && !p_ptr->suicided) {
 		s_printf("DEBUG_TOURNEY: player %s revived.\n", p_ptr->name);
 		s_printf("%s - %s%s (%d%s) was pseudo-killed by %s for %d damage at %d, %d, %d.\n", time_str, logtitlebuf, p_ptr->name, p_ptr->lev, p_ptr->admin_dm ? " DM" : (p_ptr->admin_wiz ? " DW" : ""), p_ptr->really_died_from, p_ptr->deathblow, p_ptr->wpos.wx, p_ptr->wpos.wy, p_ptr->wpos.wz);
+		if (everlasting) {
+			if (!sector000downstairs) p_ptr->global_event_temp &= ~PEVF_SAFEDUN_00;
+			recover_everlasting(Ind);
+			p_ptr->soft_deaths++;
+			return;
+		}
 
 		if (p_ptr->poisoned) (void)set_poisoned(Ind, 0, 0);
 		if (p_ptr->diseased) (void)set_diseased(Ind, 0, 0);
@@ -10245,318 +10288,76 @@ void player_death(int Ind) {
 		return;
 	}
 
-#ifdef ENABLE_INSTANT_RES
-	/* Check if instant resurrection is possible and handle it if it is */
-	if (p_ptr->insta_res && !erase && !p_ptr->suicided) {
-		char instant_res_possible = TRUE;
-		int dlvl = getlevel(&p_ptr->wpos);
-		int instant_res_cost = dlvl * dlvl * 10 + 10;
-
-		/* Only everlasters */
-		if (!(p_ptr->mode & MODE_EVERLASTING)
-		/* If already a ghost, get destroyed */
-		    || p_ptr->ghost
-		/* Insanity is a no-ghost death */
-		    || insanity
-		/* Not on NO_GHOST levels */
-		    || hell
-		/* Not on suicides */
-		    || p_ptr->suicided
-		    /* Any of the above makes instant resurrection impossible */
-		    ) instant_res_possible = FALSE;
-
- #ifdef INSTANT_RES_EXCEPTION
-		/* Not in Nether Realm */
-		if (in_netherrealm(&p_ptr->wpos))
-			instant_res_possible = FALSE;
- #endif
-
-		/* Divine wrath is meant to kill people */
-		if (streq(p_ptr->died_from, "divine wrath"))
-			instant_res_possible = FALSE;
-
-		/* Check that the player has enough money */
-		if (instant_res_cost > p_ptr->au + p_ptr->balance) {
-			msg_print(Ind, "\376\377yYou do not have sufficient funds for instant-resurrection!");
-			s_printf("INSTARES: Not enough funds (%d of %d): %s.\n", instant_res_cost, p_ptr->au + p_ptr->balance, p_ptr->name);
-			instant_res_possible = FALSE;
-		}
-
-		if (instant_res_possible) {
-			int loss_factor, reduce;
-			bool has_exp = p_ptr->max_exp != 0;
- #ifndef FALLEN_WINNERSONLY
-			int i;
-			u32b dummy, f5;
- #endif
-
-			/* Log it */
-			s_printf("%s%s - %s%s (%d%s) was defeated by %s for %d damage at %d, %d, %d. (INSTARES)\n", FORMATDEATH, time_str, logtitlebuf, p_ptr->name, p_ptr->lev, p_ptr->admin_dm ? " DM" : (p_ptr->admin_wiz ? " DW" : ""), p_ptr->died_from, p_ptr->deathblow, p_ptr->wpos.wx, p_ptr->wpos.wy, p_ptr->wpos.wz);
-			if (!strcmp(p_ptr->died_from, "It") || insanity || p_ptr->image)
-				s_printf("(%s was really defeated by %s.)\n", p_ptr->name, p_ptr->really_died_from);
- #ifdef RDPRINT_BASIC
-			rd_print(Ind, shortdate_str, format("%s%s (%d) was defeated by %s.", logtitlebuf, p_ptr->name, p_ptr->lev, p_ptr->died_from), 0);
- #endif
-
- #ifdef USE_SOUND_2010
-			/* Play the death sound */
-			if (p_ptr->male) sound(Ind, "death_male", "death", SFX_TYPE_MISC, TRUE);
-			else sound(Ind, "death_female", "death", SFX_TYPE_MISC, TRUE);
- #else
-			sound(Ind, SOUND_DEATH);
- #endif
-
-			/* Message to other players */
-			if (cfg.unikill_format)
-				snprintf(buf, sizeof(buf), "\374\377D%s %s (%d) was defeated by %s.", titlebuf, p_ptr->name, p_ptr->lev, died_from_msg);
-			else
-				snprintf(buf, sizeof(buf), "\374\377D%s (%d) was defeated by %s.", p_ptr->name, p_ptr->lev, died_from_msg);
-
-			msg_broadcast(Ind, buf);
- #ifndef RDPRINT_BASIC
-			rd_print(Ind, shortdate_str, buf, 1);
- #endif
- #ifdef TOMENET_WORLDS
-			if (cfg.worldd_pdeath) world_msg(buf);
- #endif
-
-			/* Add to legends log if he was a winner or very high level */
-			if (!is_admin(p_ptr)) {
-				if (p_ptr->total_winner)
-					l_printf("%s \\{r%s royalty %s (%d) died and was instantly resurrected\n", date_str, p_ptr->male ? "His" : "Her", p_ptr->name, p_ptr->lev);
-				else if (p_ptr->lev >= 50)
-					l_printf("%s \\{r%s (%d) died and was instantly resurrected\n", date_str, p_ptr->name, p_ptr->lev);
-			}
-
-			/* Tell him what happened -- moved the messages up here so they get onto the chardump! */
-			msg_format(Ind, "\374\377RYou were defeated by %s, but the priests have saved you.", died_from_tomb);
-
- #if CHATTERBOX_LEVEL > 2
-  #ifdef WHO_LET_THE_DOGS_OUT
-			if (strstr(p_ptr->died_from, "Farmer Maggot's dog") && magik(WHO_LET_THE_DOGS_OUT)) {
-				//msg_broadcast(0, "Suddenly a thought comes to your mind:");
-				msg_broadcast(0, "Who let the dogs out?");
-			} else
-  #endif
-			/* Actually no last_words from death.txt for instant-resurrection-deaths? */
-			if (p_ptr->last_words) {
-				char death_message[80];
-
-				(void)get_rnd_line("death.txt", 0, death_message, 80);
-				msg_print(Ind, death_message);
-			}
- #endif
-
-			/* new - death dump for insta-res too! */
-			Send_chardump(Ind, "-death");
-
- #ifdef RACE_DIZ
-			display_diz_death(Ind);
- #endif
-
-			/* Hm, this doesn't need to be on the char dump actually */
-			msg_format(Ind, "\377oThey have requested a fee of %d gold pieces.", instant_res_cost);
-
-			/* Cure him from various maladies */
-			if (p_ptr->image) (void)set_image(Ind, 0);
-			if (p_ptr->blind) (void)set_blind(Ind, 0);
-			if (p_ptr->paralyzed) (void)set_paralyzed(Ind, 0);
-			if (p_ptr->confused) (void)set_confused(Ind, 0);
-			if (p_ptr->poisoned) (void)set_poisoned(Ind, 0, 0);
-			if (p_ptr->diseased) (void)set_diseased(Ind, 0, 0);
-			if (p_ptr->stun) (void)set_stun(Ind, 0);
-			if (p_ptr->cut) (void)set_cut(Ind, -10000, 0, FALSE);
-			(void)set_food(Ind, PY_FOOD_FULL - 1);
-
-			//msg_print(Ind, "The hold of the Black Breath on you is broken!");
-			p_ptr->black_breath = FALSE;
-
-			/* Remove the death flag */
-			p_ptr->death = FALSE;
-
-			/* Give him his hit points back */
-			p_ptr->chp = p_ptr->mhp;
-			p_ptr->chp_frac = 0;
-
-			/* Lose inventory and equipment items as per normal death */
- #ifdef DEATH_PACK_ITEM_LOST
-			inven_death_damage(Ind, TRUE);
- #endif
- #ifdef DEATH_EQ_ITEM_LOST
-			equip_death_damage(Ind, TRUE);
- #endif
-
-			/* Remove wielded Morgul weapon(s) if not immune to Black Breath, to avoid death-cascade.
-			   Note: We assume here that Morgul weapons are the only equipment that can give Black Breath. */
-			if (p_ptr->inventory[INVEN_WIELD].k_idx &&
- #ifdef VAMPIRES_BB_IMMUNE
-			    p_ptr->prace != RACE_VAMPIRE &&
- #endif
-			    (p_ptr->inventory[INVEN_WIELD].name2 == EGO_MORGUL || p_ptr->inventory[INVEN_WIELD].name2b == EGO_MORGUL))
-			{
-				object_type *o_ptr;
-				char o_name[ONAME_LEN];
-
-				o_ptr = &p_ptr->inventory[INVEN_WIELD];
-				object_desc(Ind, o_name, o_ptr, TRUE, 3);
-				s_printf("item_lost_forced: %s (slot %d)\n", o_name, INVEN_WIELD);
-
-				inven_item_increase(Ind, INVEN_WIELD, -1);
-				inven_item_optimize(Ind, INVEN_WIELD);
-
-				msg_format(Ind, "\376\377oYour %s disintegrates!", o_name);
-			}
-			if (p_ptr->inventory[INVEN_ARM].k_idx && is_weapon(p_ptr->inventory[INVEN_ARM].tval) &&
- #ifdef VAMPIRES_BB_IMMUNE
-			    p_ptr->prace != RACE_VAMPIRE &&
- #endif
-			    (p_ptr->inventory[INVEN_ARM].name2 == EGO_MORGUL || p_ptr->inventory[INVEN_ARM].name2b == EGO_MORGUL))
-			{
-				object_type *o_ptr;
-				char o_name[ONAME_LEN];
-
-				o_ptr = &p_ptr->inventory[INVEN_ARM];
-				object_desc(Ind, o_name, o_ptr, TRUE, 3);
-				s_printf("item_lost_forced: %s (slot %d)\n", o_name, INVEN_ARM);
-
-				inven_item_increase(Ind, INVEN_ARM, -1);
-				inven_item_optimize(Ind, INVEN_ARM);
-
-				msg_format(Ind, "\376\377oYour %s disintegrates!", o_name);
-			}
-
-			/* Extract the cost */
-			p_ptr->au -= instant_res_cost;
-			if (p_ptr->au < 0) {
-				p_ptr->balance += p_ptr->au;
-				p_ptr->au = 0;
-			}
-
-			/* Also lose some cash on death */
-			s_printf("gold_lost: carried %d, remaining ", p_ptr->au);
- #if 0 /* lose 0 below 50k, up to 50% up to 500k, 50% after that */
-			if (p_ptr->au <= 50000) ;
-			else if (p_ptr->au <= 500000) p_ptr->au = (((p_ptr->au) * 100) / (100 + ((p_ptr->au - 50000) / 4500)));
-			else p_ptr->au /= 2;
- #else /* lose 5..33% */
-			/* overflow handling */
-			if (p_ptr->au <= 20000000) p_ptr->au = (p_ptr->au * (rand_int(29) + 67)) / 100;
-			else p_ptr->au = (p_ptr->au / 100) * (rand_int(29) + 67);
- #endif
-			s_printf("%d.\n", p_ptr->au);
-
-			p_ptr->safe_sane = TRUE;
-
-			/* Lose some experience */
-			loss_factor = INSTANT_RES_XP_LOST;
-			if (get_skill(p_ptr, SKILL_HCURING) >= 50
- #ifdef ENABLE_OCCULT /* Occult */
-			    || get_skill(p_ptr, SKILL_OSPIRIT) >= 50
- #endif
-			    ) loss_factor -= 5;
-
-			reduce = p_ptr->max_exp;
-			reduce = reduce > 99999 ?
-			reduce / 100 * loss_factor : reduce * loss_factor / 100;
-			p_ptr->max_exp -= reduce;
-
-			reduce = p_ptr->exp;
-			reduce = reduce > 99999 ?
-			reduce / 100 * loss_factor : reduce * loss_factor / 100;
-			p_ptr->exp -= reduce;
-
-			/* Prevent cheezing exp to 0 to become eligible for certain events */
-			if (!p_ptr->max_exp && has_exp) p_ptr->exp = p_ptr->max_exp = 1;
-
-			check_experience(Ind);
-
-			/* Remove massive crown of Morgoth and Grond */
-			if (p_ptr->inventory[INVEN_HEAD].k_idx && p_ptr->inventory[INVEN_HEAD].name1 == ART_MORGOTH) {
-				char o_name[ONAME_LEN];
-
-				o_ptr = &p_ptr->inventory[INVEN_HEAD];
-				object_desc(Ind, o_name, o_ptr, FALSE, 3);
-				msg_format(Ind, "\376\377oYour %s was destroyed!", o_name);
-				handle_art_d(o_ptr->name1);
-
-				inven_item_increase(Ind, INVEN_HEAD, -(o_ptr->number));
-				inven_item_optimize(Ind, INVEN_HEAD);
-			}
-			if (p_ptr->inventory[INVEN_WIELD].k_idx && p_ptr->inventory[INVEN_WIELD].name1 == ART_GROND) {
-				char o_name[ONAME_LEN];
-
-				o_ptr = &p_ptr->inventory[INVEN_WIELD];
-				object_desc(Ind, o_name, o_ptr, FALSE, 3);
-				msg_format(Ind, "\376\377oYour %s was destroyed!", o_name);
-				handle_art_d(o_ptr->name1);
-
-				inven_item_increase(Ind, INVEN_WIELD, -(o_ptr->number));
-				inven_item_optimize(Ind, INVEN_WIELD);
-			}
-
-			/* update stats */
-			p_ptr->update |= PU_SANITY;
-			update_stuff(Ind);
-			p_ptr->safe_sane = FALSE;
-
-			p_ptr->recall_pos.wx = p_ptr->town_x;
-			p_ptr->recall_pos.wy = p_ptr->town_y;
-			p_ptr->recall_pos.wz = 0;
-			p_ptr->new_level_method = LEVEL_TO_TEMPLE;
-			recall_player(Ind, "");
-
- #if 0
-			/* Unown land */
-			if (p_ptr->total_winner) {
-  #ifdef NEW_DUNGEON
-/* FIXME */
-/*
-				msg_broadcast_format(Ind, "%d(%d) and %d(%d) are no more owned.", p_ptr->own1, p_ptr->own2, p_ptr->own1 * 50, p_ptr->own2 * 50);
-				wild_info[p_ptr->own1].own = wild_info[p_ptr->own2].own = 0;
-*/
-  #else
-				msg_broadcast_format(Ind, "%d(%d) and %d(%d) are no more owned.", p_ptr->own1, p_ptr->own2, p_ptr->own1 * 50, p_ptr->own2 * 50);
-				wild_info[p_ptr->own1].own = wild_info[p_ptr->own2].own = 0;
-  #endif
-			}
- #endif
-
-			/* No longer a winner */
-			p_ptr->total_winner = FALSE;
-
-			if (p_ptr->tmp_y) {
-				/* Set all his artifacts back to normal-speed timeout */
-				if (!cfg.fallenkings_etiquette) {
-					for (j = 0; j < INVEN_TOTAL; j++)
-						if (p_ptr->inventory[j].name1 &&
-						    p_ptr->inventory[j].name1 != ART_RANDART)
-							a_info[p_ptr->inventory[j].name1].winner = FALSE;
-				}
-
- #ifdef SOLO_REKING
-				p_ptr->solo_reking = p_ptr->solo_reking_au = SOLO_REKING;
- #endif
-			}
-
- #ifndef FALLEN_WINNERSONLY
-			/* Take off winner artifacts and winner-only items */
-			for (i = INVEN_WIELD; i < INVEN_TOTAL; i++) {
-				o_ptr = &p_ptr->inventory[i];
-				object_flags(o_ptr, &dummy, &dummy, &dummy, &dummy, &f5, &dummy, &dummy);
-				if ((f5 & TR5_WINNERS_ONLY)) inven_takeoff(Ind, i, 255, FALSE, TRUE);
-			}
- #endif
-
-			/* Redraw */
-			p_ptr->redraw |= (PR_BASIC);
-			/* Update */
-			p_ptr->update |= (PU_BONUS);
-
-			p_ptr->deaths++;
-			return;
-		}
-	}
+	/* Everlasting deaths never reach item loss or final character deletion. */
+	if (everlasting) {
+		/* Log it */
+		s_printf("%s%s - %s%s (%d%s) was defeated by %s for %d damage at %d, %d, %d. (INSTARES)\n", FORMATDEATH, time_str, logtitlebuf, p_ptr->name, p_ptr->lev, p_ptr->admin_dm ? " DM" : (p_ptr->admin_wiz ? " DW" : ""), p_ptr->died_from, p_ptr->deathblow, p_ptr->wpos.wx, p_ptr->wpos.wy, p_ptr->wpos.wz);
+		if (!strcmp(p_ptr->died_from, "It") || insanity || p_ptr->image)
+			s_printf("(%s was really defeated by %s.)\n", p_ptr->name, p_ptr->really_died_from);
+#ifdef RDPRINT_BASIC
+		rd_print(Ind, shortdate_str, format("%s%s (%d) was defeated by %s.", logtitlebuf, p_ptr->name, p_ptr->lev, p_ptr->died_from), 0);
 #endif
+
+#ifdef USE_SOUND_2010
+		/* Play the death sound */
+		if (p_ptr->male) sound(Ind, "death_male", "death", SFX_TYPE_MISC, TRUE);
+		else sound(Ind, "death_female", "death", SFX_TYPE_MISC, TRUE);
+#else
+		sound(Ind, SOUND_DEATH);
+#endif
+
+		/* Message to other players */
+		if (cfg.unikill_format)
+			snprintf(buf, sizeof(buf), "\374\377D%s %s (%d) was defeated by %s.", titlebuf, p_ptr->name, p_ptr->lev, died_from_msg);
+		else
+			snprintf(buf, sizeof(buf), "\374\377D%s (%d) was defeated by %s.", p_ptr->name, p_ptr->lev, died_from_msg);
+
+		msg_broadcast(Ind, buf);
+#ifndef RDPRINT_BASIC
+		rd_print(Ind, shortdate_str, buf, 1);
+#endif
+#ifdef TOMENET_WORLDS
+		if (cfg.worldd_pdeath) world_msg(buf);
+#endif
+
+		/* Add to legends log if he was a winner or very high level */
+		if (!is_admin(p_ptr)) {
+			if (p_ptr->total_winner)
+				l_printf("%s \\{r%s royalty %s (%d) died and was instantly resurrected\n", date_str, p_ptr->male ? "His" : "Her", p_ptr->name, p_ptr->lev);
+			else if (p_ptr->lev >= 50)
+				l_printf("%s \\{r%s (%d) died and was instantly resurrected\n", date_str, p_ptr->name, p_ptr->lev);
+		}
+
+		/* Tell him what happened -- moved the messages up here so they get onto the chardump! */
+		msg_format(Ind, "\374\377RYou were defeated by %s, but the priests have saved you.", died_from_tomb);
+
+#if CHATTERBOX_LEVEL > 2
+  #ifdef WHO_LET_THE_DOGS_OUT
+		if (strstr(p_ptr->died_from, "Farmer Maggot's dog") && magik(WHO_LET_THE_DOGS_OUT)) {
+			//msg_broadcast(0, "Suddenly a thought comes to your mind:");
+			msg_broadcast(0, "Who let the dogs out?");
+		} else
+  #endif
+		/* Actually no last_words from death.txt for instant-resurrection-deaths? */
+		if (p_ptr->last_words) {
+			char death_message[80];
+
+			(void)get_rnd_line("death.txt", 0, death_message, 80);
+			msg_print(Ind, death_message);
+		}
+#endif
+
+		/* new - death dump for insta-res too! */
+		Send_chardump(Ind, "-death");
+
+#ifdef RACE_DIZ
+		display_diz_death(Ind);
+#endif
+
+		recover_everlasting(Ind);
+		p_ptr->deaths++;
+		return;
+	}
 
 	/* Players of level cfg.nodrop [5] will die a no-ghost death.
 	   This should clarify the situation for newbies and avoid them
@@ -11623,35 +11424,38 @@ void resurrect_player(int Ind, int loss_factor) {
 
 	disturb(Ind, 1, 0);
 
-	/* limits - hack: '0' means use default value */
-	if (!loss_factor) loss_factor = GHOST_XP_LOST;
-	/* paranoia */
-	else if (loss_factor < 0) loss_factor = GHOST_XP_LOST;
-	else if (loss_factor > 100) loss_factor = GHOST_XP_LOST;
+	if (p_ptr->mode & MODE_EVERLASTING) loss_factor = 0;
+	else {
+		/* limits - hack: '0' means use default value */
+		if (!loss_factor) loss_factor = GHOST_XP_LOST;
+		/* paranoia */
+		else if (loss_factor < 0) loss_factor = GHOST_XP_LOST;
+		else if (loss_factor > 100) loss_factor = GHOST_XP_LOST;
 
-	/* Lose some experience */
-	if (get_skill(p_ptr, SKILL_HCURING) >= 50
+		/* Lose some experience */
+		if (get_skill(p_ptr, SKILL_HCURING) >= 50
 #ifdef ENABLE_OCCULT /* Occult */
-	    || get_skill(p_ptr, SKILL_OSPIRIT) >= 50
+		    || get_skill(p_ptr, SKILL_OSPIRIT) >= 50
 #endif
-	    ) loss_factor -= 5;
-	if (loss_factor < 30) loss_factor = 30;//hardcoded mess
+		    ) loss_factor -= 5;
+		if (loss_factor < 30) loss_factor = 30;//hardcoded mess
 
-	reduce = p_ptr->max_exp;
-	reduce = reduce > 99999 ?
-	    reduce / 100 * loss_factor : reduce * loss_factor / 100;
-	p_ptr->max_exp -= reduce;
+		reduce = p_ptr->max_exp;
+		reduce = reduce > 99999 ?
+		    reduce / 100 * loss_factor : reduce * loss_factor / 100;
+		p_ptr->max_exp -= reduce;
 
-	reduce = p_ptr->exp;
-	reduce = reduce > 99999 ?
-	    reduce / 100 * loss_factor : reduce * loss_factor / 100;
-	p_ptr->exp -= reduce;
+		reduce = p_ptr->exp;
+		reduce = reduce > 99999 ?
+		    reduce / 100 * loss_factor : reduce * loss_factor / 100;
+		p_ptr->exp -= reduce;
 
-	/* Prevent cheezing exp to 0 to become eligible for certain events */
-	if (!p_ptr->max_exp && has_exp) p_ptr->exp = p_ptr->max_exp = 1;
+		/* Prevent cheezing exp to 0 to become eligible for certain events */
+		if (!p_ptr->max_exp && has_exp) p_ptr->exp = p_ptr->max_exp = 1;
+	}
 
 	p_ptr->safe_sane = TRUE;
-	check_experience(Ind);
+	if (!(p_ptr->mode & MODE_EVERLASTING)) check_experience(Ind);
 	p_ptr->update |= PU_SANITY;
 	update_stuff(Ind);
 	p_ptr->safe_sane = FALSE;
@@ -11679,7 +11483,7 @@ void resurrect_player(int Ind, int loss_factor) {
 	s_printf("RESURRECTED: %s at (%d,%d,%d) for -%d%% -> lives=%d.\n", p_ptr->name, p_ptr->wpos.wx, p_ptr->wpos.wy, p_ptr->wpos.wz, loss_factor, p_ptr->lives);
 
 	/* Bonus service: Also restore drained exp (for newbies, especially) */
-	restore_level(Ind);
+	if (!(p_ptr->mode & MODE_EVERLASTING)) restore_level(Ind);
 
 	/* Redraw */
 	p_ptr->redraw |= (PR_BASIC);
@@ -11688,7 +11492,7 @@ void resurrect_player(int Ind, int loss_factor) {
 	p_ptr->update |= (PU_BONUS);
 
 	/* Inform him of instant resurrection option */
-	if (p_ptr->warning_instares == 0) {
+	if (p_ptr->warning_instares == 0 && !(p_ptr->mode & MODE_EVERLASTING)) {
 		p_ptr->warning_instares = 1;
 		msg_print(Ind, "\375\377yHINT: You can turn on \377oInstant Resurrection\377y in the temple by pressing '\377or\377y'.");
 		msg_print(Ind, "\375\377y      Make sure to read up on it in the \377oguide\377y to understand pros and cons!");
