@@ -61,7 +61,7 @@ ForceIMEOn=0
 
 ; - Do not move lib\scpt, lib\user and sound/music live configs to the user's
 ;system home folder but keep using the folder where TomeNET is installed.
-DontMoveUser=0
+DontMoveUser=1
 
 
 ; - Enable freely scalable logfont?

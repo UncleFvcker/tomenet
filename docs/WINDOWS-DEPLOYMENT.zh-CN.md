@@ -91,6 +91,7 @@ Compress-Archive -LiteralPath 'D:\Games\TomeNET-Server' -DestinationPath 'E:\Bac
 6. 确认数据正常后保留旧目录作为离线回退备份。旧机器不要同时继续开服，避免出现两个分叉世界。
 
 客户端也可整体复制到新电脑，包括 `TomeNET.ini` 和 `lib\user` 中的宏、窗口及偏好。
+本包将 `DontMoveUser` 设为 `1`，配置保留在客户端目录，便于完整复制。
 运行后更改服务器地址即可；角色和账号无需从客户端迁移。
 
 迁移时先使用备份中的同一版本 EXE 和 DLL。升级是另外一步，应再次停服和备份，
