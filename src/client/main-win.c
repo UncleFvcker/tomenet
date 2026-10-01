@@ -6116,7 +6116,7 @@ int FAR PASCAL WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, in
 
 	hInstance = hInst;  /* save in a global var */
 
-	int i, n;
+	int i, n, command_line_port = 0;
 	bool done = FALSE, quoted = FALSE, just_h = FALSE;
 	u32b seed;
 
@@ -6261,7 +6261,7 @@ int FAR PASCAL WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, in
 				i += cmd_get_string(&lpCmdLine[i + 1], cname, MAX_CHARS, quoted);
 				break;
 			case 'p': /* port */
-				i += cmd_get_number(&lpCmdLine[i + 1], (int*)&cfg_game_port);
+				i += cmd_get_number(&lpCmdLine[i + 1], &command_line_port);
 				break;
 			case 'P': /* lib directory path */
 				i += cmd_get_string(&lpCmdLine[i + 1], path, 1024, quoted);
@@ -6377,6 +6377,8 @@ int FAR PASCAL WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR lpCmdLine, in
 
 	/* Prepare the windows */
 	init_windows();
+	/* Command-line port takes precedence over the INI loaded by init_windows(). */
+	if (command_line_port) cfg_game_port = command_line_port;
 #if 1
 	/* Check after ini has been loaded, so we know the bigmap_hint state and can use it to conclude if this is a first-run or not. */
 	if (!bigmap_hint || c_cfg.big_map) ask_for_graphics = FALSE;
