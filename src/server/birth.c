@@ -3522,6 +3522,7 @@ bool player_birth(int Ind, int conn, connection_t *connp) {
 
 	/* paranoia? */
 	p_ptr->skill_points = 0;
+	p_ptr->skill_points_bonus = 0;
 
 	/* Set info -
 	   First byte of 'sex' carries the 'mode', the second byte carries extra mode info that needs to be translated. */

@@ -1,7 +1,7 @@
 # Windows 64 位部署、连接和迁移
 
 这两个安装包来自 `UncleFvcker/tomenet` 的 `merge/everlasting-skill` 分支，
-保留基于 `1iuh/master` 的自定义功能，包含 Everlasting 免费回城复活和 Skill 药水。
+保留基于 `1iuh/master` 的自定义功能，包含 Everlasting 免费回城复活、Skill 药水和免费洗点。
 具体源码提交、架构和随包 DLL 记录在安装包内的 `BUILD-INFO.json`。
 
 ## 1. 新机器部署服务端
@@ -103,6 +103,11 @@ Compress-Archive -LiteralPath 'D:\Games\TomeNET-Server' -DestinationPath 'E:\Bac
 迁移或日常启动不要使用 `-r`、`-w`、`-f`、`-h` 参数，它们会重建世界、地图、物品外观或房屋。
 
 ## 5. 常见问题
+
+- 随时洗点：按 `:` 打开聊天输入 `/respec`。普通玩家也可使用，任何地点、任意次数、免费，
+  返还全部可分配技能点，保留种族和职业的初始技能；按 `G` 重新分配。
+  旧角色按历史最高等级的正常点数兼容；更新后获得的 Skill／Learning 药水及升级额外奖励会记录并保留。
+  只需更新服务端，客户端和配置无需更换。更新前正常停服并备份 `lib\save`，再替换服务端 EXE。
 
 - DLL 缺失：确认完整解压，并检查杀毒软件是否隔离了文件；无需另装 MSYS2。
 - 无法连接：先测试同机 `127.0.0.1`，再核对服务端是否运行、IP、TCP 端口、防火墙和端口转发。

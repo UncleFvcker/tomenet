@@ -1222,6 +1222,7 @@ bool quaff_potion(int Ind, int tval, int sval, int pval) {
 			/* gain skill points */
 			i = 1 + rand_int(3);
 			p_ptr->skill_points += i;
+			p_ptr->skill_points_bonus += i;
 			p_ptr->update |= PU_SKILL_MOD;
 			if (is_older_than(&p_ptr->version, 4, 4, 8, 5, 0, 0)) p_ptr->redraw |= PR_STUDY;
 			msg_format(Ind, "You gained %d more skill point%s.", i, (i == 1) ? "" : "s");
@@ -1288,6 +1289,7 @@ bool quaff_potion(int Ind, int tval, int sval, int pval) {
 			/* gain skill points */
 			i = 1 + rand_int(3);
 			p_ptr->skill_points += i;
+			p_ptr->skill_points_bonus += i;
 			p_ptr->update |= PU_SKILL_MOD;
 			if (is_older_than(&p_ptr->version, 4, 4, 8, 5, 0, 0)) p_ptr->redraw |= PR_STUDY;
 			msg_format(Ind, "You gained %d more skill point%s.", i, (i == 1) ? "" : "s");
@@ -1301,6 +1303,7 @@ bool quaff_potion(int Ind, int tval, int sval, int pval) {
 				break;
 			}
 			p_ptr->skill_points++;
+			p_ptr->skill_points_bonus++;
 			/* Keep the extra point when undoing skill allocation. */
 			if (p_ptr->reskill_possible & RESKILL_F_UNDO) p_ptr->skill_points_old++;
 			p_ptr->update |= PU_SKILL_MOD;

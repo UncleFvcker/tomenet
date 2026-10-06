@@ -3271,6 +3271,7 @@ struct player_type {
 
 	skill_player s_info[MAX_SKILLS]; /* Player skills */
 	s16b skill_points;		/* number of skills assignable */
+	s32b skill_points_bonus;		/* permanent points beyond the normal level allowance */
 
 	/* Copies for /undoskills - mikaelh */
 	skill_player s_info_old[MAX_SKILLS]; /* Player skills */

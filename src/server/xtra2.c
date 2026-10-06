@@ -4878,7 +4878,10 @@ static void check_training(int Ind) {
 	}
 
 	/* Also, it can give an extra skill point */
-	if (magik(train)) p_ptr->skill_points++;
+	if (magik(train)) {
+		p_ptr->skill_points++;
+		p_ptr->skill_points_bonus++;
+	}
 }
 
 /* Update our eligible sanity GUIs */
@@ -5012,6 +5015,7 @@ void check_experience(int Ind) {
 
 		/* Save the highest level */
 		if (p_ptr->lev > p_ptr->max_plv) {
+			int previous_skill_points = p_ptr->skill_points;
 			p_ptr->max_plv = p_ptr->lev;
 
 #ifdef IDDC_LEVELUP_RESTORES_STAT
@@ -5064,6 +5068,7 @@ void check_experience(int Ind) {
 #endif
 			if (is_older_than(&p_ptr->version, 4, 4, 8, 5, 0, 0)) p_ptr->redraw |= PR_STUDY;
 			p_ptr->update |= PU_SKILL_MOD;
+			p_ptr->skill_points_bonus += p_ptr->skill_points - previous_skill_points - SKILL_NB_BASE;
 
 			newlv = TRUE;
 

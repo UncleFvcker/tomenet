@@ -4065,6 +4065,11 @@ void do_slash_cmd(int Ind, char *message, char *message_u) {
 			return;
 		}
 
+		else if (streq(messagelc, "/respec")) {
+			respec_skills(Ind, TRUE);
+			return;
+		}
+
 		/* Allow players to undo some of their skills - mikaelh */
 		else if (prefix(messagelc, "/undoskills") || prefix(messagelc, "/undos")) {
 			/* Skill points gained */
@@ -15392,7 +15397,7 @@ static void do_slash_brief_help(int Ind) {
 		msg_print(Ind, "  /dis \377rdestroys \377wall the uninscribed items in your inventory!");
 #else
 #endif
-	msg_print(Ind, "Common commands: \377yex fe rec fill cough afk page note undoskills t ut dis bug rfe\377w."); //xo,que,ic,ig,shout,seen,time,tym,tip,s,me
+	msg_print(Ind, "Common commands: \377yex fe rec fill cough afk page note undoskills respec t ut dis bug rfe\377w."); //xo,que,ic,ig,shout,seen,time,tym,tip,s,me
 	msg_print(Ind, " Press '\377y?\377w' key to see a list of command keys. Press \377y~g\377w for the TomeNET Guide.");
 }
 

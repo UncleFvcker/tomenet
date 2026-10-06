@@ -21,7 +21,8 @@ cave_type **__wrap_getcave(worldpos *wpos) { return real_recall ? cave_rows : NU
 int __wrap_getlevel(worldpos *wpos) { return ABS(wpos->wz); }
 cptr __wrap_get_ptitle(player_type *p, bool short_form) { return "Tester"; }
 int __wrap_get_esp_link(int Ind, u32b flags, player_type **p) { return 0; }
-s16b __wrap_get_skill(player_type *p, int skill) { return 0; }
+s16b __real_get_skill(player_type *p, int skill);
+s16b __wrap_get_skill(player_type *p, int skill) { return __real_get_skill(p, skill); }
 int __wrap_s_printf(const char *fmt, ...) {
 	if (legacy_path && !strncmp(fmt, "CHARACTER_TERMINATION:", 22)) longjmp(legacy_jump, 1);
 	return 0;
@@ -143,6 +144,7 @@ static void check_death(void) {
 }
 
 void check_skill_potion(void);
+void check_skill_respec(void);
 
 int main(void) {
 	player_type *players[2] = {NULL, &player};
@@ -150,6 +152,7 @@ int main(void) {
 	Players = players;
 	Conn = connections;
 	check_skill_potion();
+	check_skill_respec();
 	/* Preserve ordinary disconnect protection; Everlasting still revives fully. */
 	setup(); Conn[0]->last_keepalive_recv.tv_sec -= 3; check_death();
 	setup(); player.mode = 0; Conn[0]->last_keepalive_recv.tv_sec -= 3;

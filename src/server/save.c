@@ -1203,8 +1203,8 @@ static void wr_extra(int Ind) {
 	wr_byte(p_ptr->combosets);
 	wr_s16b(p_ptr->cut_bandaged);
 
-	/* --- future use / HOLE: --- */
-	for (i = 0; i < 4; i++) wr_byte(0);
+	/* Use the existing four reserved bytes without changing the save layout. */
+	wr_s32b(p_ptr->skill_points_bonus);
 
 	/* for shuffling/dealing a deck of cards */
 	wr_u16b(p_ptr->cards_diamonds);

@@ -14,6 +14,7 @@ void check_skill_potion(void) {
 	for (int i = 0; i < 10; i++) {
 		assert(quaff_potion(1, TV_POTION2, SV_POTION2_SKILL, 0));
 		assert(p->skill_points == 8 + i && p->skill_points_old == 11 + i);
+		assert(p->skill_points_bonus == i + 1);
 		assert(p->update & PU_SKILL_MOD);
 		assert(p->redraw & PR_STUDY);
 		assert(!bypass_invuln);
@@ -29,12 +30,14 @@ void check_skill_potion(void) {
 	p->redraw = p->update = 0;
 	assert(quaff_potion(1, TV_POTION2, SV_POTION2_SKILL, 0));
 	assert(p->skill_points == 21 && p->skill_points_old == 20);
+	assert(p->skill_points_bonus == 11);
 	assert(p->update & PU_SKILL_MOD);
 	assert(!(p->redraw & PR_STUDY));
 	/* Never wrap the signed skill-point counters into negative values. */
 	p->skill_points = MAX_SHORT - 1;
 	assert(quaff_potion(1, TV_POTION2, SV_POTION2_SKILL, 0));
 	assert(p->skill_points == MAX_SHORT);
+	assert(p->skill_points_bonus == 12);
 	assert(quaff_potion(1, TV_POTION2, SV_POTION2_SKILL, 0));
 	assert(p->skill_points == MAX_SHORT);
 	p->skill_points = 7;
@@ -42,5 +45,6 @@ void check_skill_potion(void) {
 	p->reskill_possible = RESKILL_F_UNDO;
 	assert(quaff_potion(1, TV_POTION2, SV_POTION2_SKILL, 0));
 	assert(p->skill_points == 7 && p->skill_points_old == MAX_SHORT);
+	assert(p->skill_points_bonus == 12);
 	puts("Skill potion checks passed.");
 }

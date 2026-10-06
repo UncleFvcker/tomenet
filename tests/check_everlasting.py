@@ -3,9 +3,11 @@
 Links the actual server objects; wrappers isolate map/network I/O and prevent
 legacy death paths from touching save files. This does not test live map changes.
 Also checks the Skill potion's allocation data and actual potion effect.
+Checks free respec, bonus-point persistence and legacy zero-word compatibility.
 """
 from pathlib import Path
 import re
+import os
 import subprocess
 import tempfile
 
@@ -29,9 +31,16 @@ for name in ("SERV_OBJS", "LUAOBJS", "TOLUAOBJS"):
     block = re.search(rf"^{name} = (.*?)(?=\n\s*\n)", makefile, re.M | re.S)
     objects.extend(block[1].replace("\\\n", " ").split())
 objects = list(dict.fromkeys(objects))
+# The legacy makefile has no header dependencies; player_type changes affect all objects.
+header_time = max(path.stat().st_mtime for folder in (SRC / "common", SRC / "server")
+                  for path in folder.glob("*.h"))
+for obj in objects:
+    path = SRC / obj
+    if path.exists() and path.stat().st_mtime < header_time:
+        path.unlink()
 subprocess.run(["make", "-f", "makefile.win", "-j4", "CFLAGS=" + " ".join(FLAGS),
                 "LUACFLAGS=" + " ".join(FLAGS), *objects], cwd=SRC, check=True)
-test_sources = [ROOT / "tests/everlasting.c", ROOT / "tests/skill_potion.c"]
+test_sources = [ROOT / "tests/everlasting.c", ROOT / "tests/skill_potion.c", ROOT / "tests/skill_respec.c"]
 wrappers = re.findall(r"__wrap_(\w+)\(", "\n".join(path.read_text() for path in test_sources))
 output_root = ROOT / ".github/workspace"
 output_root.mkdir(parents=True, exist_ok=True)
@@ -57,4 +66,5 @@ with tempfile.TemporaryDirectory(prefix="everlasting-", dir=output_root) as temp
                         *["-Wl,--wrap=" + name for name in sorted(set(wrappers))],
                         "-lkernel32", "-luser32", "-lwsock32", "-lgdi32", "-lcomdlg32",
                         "-lwinmm", "-lregex", "-o", str(binary)], cwd=SRC, check=True)
-        subprocess.run([str(binary)], cwd=SRC, check=True)
+        subprocess.run([str(binary)], cwd=SRC, check=True,
+                       env={**os.environ, "TOMENET_TEST_DIR": str(temp)})

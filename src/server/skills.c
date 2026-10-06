@@ -1249,33 +1249,50 @@ void respec_skills(int Ind, bool update_skills) {
 	player_type *p_ptr = Players[Ind];
 	int i;
 	s32b v, m; /* base starting skill value, skill modifier */
+	s32b points = (p_ptr->max_plv - 1) * SKILL_NB_BASE + p_ptr->skill_points_bonus;
+
+	/* Preserve existing unspent points, including admin-granted points. */
+	if (points < p_ptr->skill_points) points = p_ptr->skill_points;
+	if (points < 0 || points > MAX_SHORT) {
+		msg_print(Ind, "Your skill point total is outside the supported range; no skills were reset.");
+		return;
+	}
+	/* Maia shaping must not automatically reinvest points during a full reset. */
+	p_ptr->skill_points = 0;
 
 	/* Remove the points, ie set skills to its starting base values again */
 	for (i = 0; i < MAX_SKILLS; i++) {
 		v = 0; m = 0;
 		if (update_skills) {
 			compute_skills(p_ptr, &v, &m, i);
-			p_ptr->s_info[i].base_value = v;
-			p_ptr->s_info[i].value = v;
-			p_ptr->s_info[i].mod = m;
-			//new (for occult): also fix flags (DUMMY flag for SKILL_SCHOOL_OCCULT)
-			p_ptr->s_info[i].flags1 = (char)(s_info[i].flags1 & 0xFF);
+			init_skill(p_ptr, v, m, i);
 		} else {
 			p_ptr->s_info[i].value = p_ptr->s_info[i].base_value;
 		}
 	}
+#ifdef VAMP_ISTAR_SHADOW
+	if (update_skills && p_ptr->prace == RACE_VAMPIRE && p_ptr->pclass == CLASS_MAGE)
+		init_skill(p_ptr, 1000, 1700, SKILL_OSHADOW);
+#endif
+#ifdef VAMP_ISTAR_UNLIFE
+	if (update_skills && p_ptr->prace == RACE_VAMPIRE && p_ptr->pclass == CLASS_MAGE)
+		init_skill(p_ptr, 0, 1700, SKILL_OUNLIFE);
+#endif
+	if (p_ptr->prace == RACE_DRACONIAN && p_ptr->ptrait != TRAIT_MULTI && p_ptr->ptrait != TRAIT_POWER)
+		p_ptr->s_info[SKILL_PICK_BREATH].value = 0;
 	if (p_ptr->fruit_bat == 1) fruit_bat_skills(p_ptr);
 
 #ifdef ENABLE_SUBCLASS
 	if (p_ptr->sclass) subclass_skills(Ind, (p_ptr->sclass - 1));
 #endif
+	if (update_skills && p_ptr->prace == RACE_MAIA) shape_Maia_skills(Ind, FALSE);
 
 	/* Update the client */
 	for (i = 0; i < MAX_SKILLS; i++) Send_skill_info(Ind, i, FALSE);
 
 	/* Calculate amount of skill points that should be
 	    available to the player depending on his level */
-	p_ptr->skill_points = (p_ptr->max_plv - 1) * SKILL_NB_BASE;
+	p_ptr->skill_points = points;
 
 	/* in case we changed mimicry skill */
 	do_mimic_change(Ind, 0, TRUE);
@@ -1294,8 +1311,13 @@ void respec_skills(int Ind, bool update_skills) {
 	/* XXX updating is delayed till player leaves the skill screen */
 	p_ptr->update |= (PU_SKILL_MOD);
 	/* also update 'C' character screen live! */
-	p_ptr->update |= (PU_BONUS);
+	p_ptr->update |= (PU_BONUS | PU_HP | PU_MANA);
 	p_ptr->redraw |= (PR_SKILLS | PR_PLUSSES);
+	if (p_ptr->spell_project && get_skill(p_ptr, SKILL_META) < 10) p_ptr->spell_project = 0;
+	if (!get_skill(p_ptr, SKILL_AURA_FEAR)) p_ptr->aura[AURA_FEAR] = FALSE;
+	if (!get_skill(p_ptr, SKILL_AURA_SHIVER)) p_ptr->aura[AURA_SHIVER] = FALSE;
+	if (!get_skill(p_ptr, SKILL_AURA_DEATH)) p_ptr->aura[AURA_DEATH] = FALSE;
+	update_sanity_bars(p_ptr);
 
 	/* Discard old "save point" for /undoskills command */
 	memcpy(p_ptr->s_info_old, p_ptr->s_info, MAX_SKILLS * sizeof(skill_player));
@@ -1307,6 +1329,7 @@ void respec_skills(int Ind, bool update_skills) {
 
 	/* For Anti-Static Wrapping eligibility (SKILL_DEVICE, SKILL_TRAPPING): */
 	p_ptr->window |= PW_ALLITEMS;
+	msg_format(Ind, "\377GSkill reset complete. You have %d unspent skill points.", p_ptr->skill_points);
 }
 
 /* return amount of points that were invested into a skill */

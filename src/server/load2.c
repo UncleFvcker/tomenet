@@ -2729,9 +2729,12 @@ if (p_ptr->updated_savegame == 0) {
 		rd_byte(&p_ptr->combosets);
 		rd_s16b(&p_ptr->cut_bandaged);
 
-		// --- future use / HOLE: ---
-		strip_bytes(4);
-	} else p_ptr->tim_lcage = 0;
+		/* Older saves wrote zero into this reserved field. */
+		rd_s32b(&p_ptr->skill_points_bonus);
+	} else {
+		p_ptr->tim_lcage = 0;
+		p_ptr->skill_points_bonus = 0;
+	}
 
 	if (!older_than(4, 5, 28)) {
 		rd_u16b(&p_ptr->cards_diamonds);
