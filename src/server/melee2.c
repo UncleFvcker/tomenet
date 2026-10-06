@@ -17,6 +17,29 @@
 
 #include "angband.h"
 
+static void monster_spell_cooldown_start(monster_type *m_ptr, int chance) {
+	monster_race *r_ptr = race_inf(m_ptr);
+	if (!chance) return;
+	/* Parsed denominators avoid rounding 1_IN_15 (6%) into 17 turns. */
+	m_ptr->spell_cooldown = r_ptr->spell_interval && 100 / r_ptr->spell_interval == chance ?
+	    r_ptr->spell_interval : (100 + chance - 1) / chance;
+	m_ptr->spell_cooldown_energy = 0;
+}
+
+static void monster_spell_cooldown_charge(monster_type *m_ptr, int energy) {
+	if (m_ptr->spell_cooldown && !m_ptr->csleep) {
+		/* Cap at one action: inactive monsters cannot bank several cooldown turns. */
+		m_ptr->spell_cooldown_energy = MIN(level_speed(&m_ptr->wpos), m_ptr->spell_cooldown_energy + energy);
+	}
+}
+
+static void monster_spell_cooldown_end_turn(monster_type *m_ptr) {
+	if (m_ptr->spell_cooldown && m_ptr->spell_cooldown_energy >= level_speed(&m_ptr->wpos)) {
+		m_ptr->spell_cooldown--;
+		m_ptr->spell_cooldown_energy = 0;
+	}
+}
+
 
 #ifdef TELEPORT_SURPRISES
  #define TELEPORT_SURPRISED(p_ptr,r_ptr) \
@@ -2155,7 +2178,7 @@ bool make_attack_spell(int Ind, int m_idx) {
 	if (p_ptr->id == m_ptr->owner) return(FALSE);
 
 	/* Cannot cast spells when confused */
-	if (m_ptr->confused) return(FALSE);
+	if (m_ptr->confused || m_ptr->spell_cooldown) return(FALSE);
 
 	/* Hack -- Extract the spell probability */
 	chance = (r_ptr->freq_innate + r_ptr->freq_spell) / 2;
@@ -2174,6 +2197,7 @@ bool make_attack_spell(int Ind, int m_idx) {
 
 	/* Hack: Shrieking Test Blob always keeps shrieking (non-aggravating/disturbing! Just for sound test :D) */
 	if (m_ptr->r_idx == RI_BLOB_SHRIEK) {
+		monster_spell_cooldown_start(m_ptr, chance);
 		monster_desc(Ind, m_name, m_idx, 0x00);
 		monster_desc(Ind, m_name_real, m_idx, 0x100);
 
@@ -2438,6 +2462,9 @@ bool make_attack_spell(int Ind, int m_idx) {
 
 	/* Extract the monster level */
 	rlev = ((r_ptr->level >= 1) ? r_ptr->level : 1);
+
+	/* A chosen spell consumes the action even if it fails or is intercepted. */
+	monster_spell_cooldown_start(m_ptr, chance);
 
 #ifndef STUPID_MONSTER_SPELLS
 	/* Check for spell failure chance and generic interception for 'real' spells */
@@ -7857,6 +7884,7 @@ static bool get_moves(int Ind, int m_idx, int *mm) {
 	if ((r_ptr->flags7 & RF7_ASTAR) && (m_ptr->astar_idx != -1))
 		switch (get_moves_astar(Ind, m_idx, &y2, &x2)) {
 		case 0: /* No moves (entombed) - blink or teleport */
+			if (m_ptr->spell_cooldown) break;
 			//no worky: m_ptr->ai_state |= AI_STATE_EFFECT;
 
 			if (!(r_ptr->flags6 & (RF6_BLINK | RF6_TPORT)) && !(r_ptr->flags0 & (RF0_BLINK_PHYS | RF0_TPORT_PHYS))) break; //proceed normally.
@@ -7870,6 +7898,7 @@ static bool get_moves(int Ind, int m_idx, int *mm) {
 				chance = (r_ptr->freq_innate + r_ptr->freq_spell) / 2;
 				/* Only do spells occasionally */
 				if (rand_int(100) >= chance) break; //proceed normally.
+				monster_spell_cooldown_start(m_ptr, chance);
 
 				if ((r_ptr->flags6 & RF6_BLINK) || (r_ptr->flags0 & RF0_BLINK_PHYS)) spellmove += 2;
 				if ((r_ptr->flags6 & RF6_TPORT) || (r_ptr->flags0 & RF0_TPORT_PHYS)) spellmove += 4;
@@ -7941,6 +7970,7 @@ static bool get_moves(int Ind, int m_idx, int *mm) {
 				break; //we didn't do anything - can't happen anymore at this point though - paranoia
 			}
 		case 2: /* No good moves (can't get closer) - blink or wait */
+			if (m_ptr->spell_cooldown) break;
 			if (!(r_ptr->flags6 & RF6_BLINK) && !(r_ptr->flags0 & RF0_BLINK_PHYS)) break; //we can't blink. Proceed normally.
 			if (rand_int(3)) break; //we decided to not to blink, but just wait..
 
@@ -7953,6 +7983,7 @@ static bool get_moves(int Ind, int m_idx, int *mm) {
 				chance = (r_ptr->freq_innate + r_ptr->freq_spell) / 2;
 				/* Only do spells occasionally */
 				if (rand_int(100) >= chance) break; //proceed normally.
+				monster_spell_cooldown_start(m_ptr, chance);
 
 				/* --- COPY/PASTED from make_attack_spell() --- keep in sync! --- */
 
@@ -10221,7 +10252,7 @@ static void process_monster(int Ind, int m_idx, bool force_random_movement) {
 #endif
 	    (!istown(wpos) && (m_ptr->wpos.wz != 0 ||
 	     wild_info[m_ptr->wpos.wy][m_ptr->wpos.wx].radius >= MAX_TOWNAREA) ) &&
-	    (num_repro < MAX_REPRO))
+	    (monster_family_births(m_ptr) < MAX_REPRO))
 #if REPRO_RATE
 		if (magik(REPRO_RATE))
 #endif	// REPRO_RATE
@@ -12440,6 +12471,7 @@ void process_monsters(void) {
 
 		/* Give this monster some energy */
 		m_ptr->energy += e * MONSTER_TURNS;
+		monster_spell_cooldown_charge(m_ptr, e * MONSTER_TURNS);
 #ifndef SIMPLE_ANTISTUCK
 		/* Handle hack for spell-casting energy while monster is stuck physically (blocked by terrain or other monsters) */
 		if (m_ptr->stuck) {
@@ -13128,7 +13160,10 @@ void process_monsters(void) {
 			/* Hack -- suppress messages */
 			if (p_ptr->taciturn_messages) suppress_message = TRUE;
 
+			bool cooling = m_ptr->spell_cooldown && !m_ptr->csleep;
 			process_monster(closest, i, (may_move_Ind != 0));
+			/* Block this entire action before reducing the old cooldown, including stuck retries. */
+			if (cooling) monster_spell_cooldown_end_turn(m_ptr);
 
 			/* for C_BLUE_AI (to remember if the player stood beside us and
 			   then runs away from us to make us follow him): */

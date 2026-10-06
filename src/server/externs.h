@@ -1212,6 +1212,10 @@ extern bool summon_detailed_race(struct worldpos *wpos, int y1, int x1, int r_id
 extern bool summon_specific_race_somewhere(struct worldpos *wpos, int r_idx, int s_clone, unsigned char num);
 extern int summon_detailed_one_somewhere(struct worldpos *wpos, int r_idx, int ego, bool slp, int s_clone);
 extern bool multiply_monster(int m_idx);
+extern byte monster_family_births(monster_type *m_ptr);
+extern void monster_families_reset(void);
+extern bool monster_family_restore(monster_type *m_ptr, byte births);
+extern bool replace_monster(int m_idx, int r_idx);
 extern void update_smart_learn(int Ind, int m_idx, int what);
 extern void setup_monsters(void);
 extern int race_index(char * name);

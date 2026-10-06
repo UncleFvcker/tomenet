@@ -1059,6 +1059,8 @@ static void rd_monster_race(monster_race *r_ptr) {
 		rd_byte(&r_ptr->blow[i].d_dice);
 		rd_byte(&r_ptr->blow[i].d_side);
 	}
+	r_ptr->spell_interval = 0;
+	if (!s_older_than(4, 9, 26)) rd_byte(&r_ptr->spell_interval);
 }
 
 
@@ -1066,7 +1068,7 @@ static void rd_monster_race(monster_race *r_ptr) {
  * Read a monster
  */
 
-static void rd_monster(monster_type *m_ptr) {
+static errr rd_monster(monster_type *m_ptr, bool keep_family) {
 	byte i;
 
 	/* Hack -- wipe */
@@ -1179,6 +1181,16 @@ static void rd_monster(monster_type *m_ptr) {
 		rd_byte(&m_ptr->related_type);
 		rd_s32b(&m_ptr->custom_xp);
 	}
+	if (!s_older_than(4, 9, 26)) {
+		byte births;
+		rd_u16b(&m_ptr->repro_family);
+		rd_byte(&births);
+		rd_byte(&m_ptr->spell_cooldown);
+		rd_u16b(&m_ptr->spell_cooldown_energy);
+		if (m_ptr->spell_cooldown > 100 ||
+		    (keep_family && !monster_family_restore(m_ptr, births))) return 29;
+	}
+	return 0;
 }
 
 
@@ -3868,11 +3880,15 @@ errr rd_server_savefile() {
 #endif
 	}
 	/* load the monsters */
-	for (i = 0; i < num_monsters; i++) rd_monster(&m_list[m_pop()]);
+	monster_families_reset();
+	for (i = 0; i < num_monsters; i++) {
+		int m_idx = m_pop();
+		if (!m_idx || rd_monster(&m_list[m_idx], TRUE)) return 29;
+	}
 #ifdef ALLOW_EXCESS_DATA
 	/* Just discard excess data */
 	for (i = 0; i < overflow; i++) {
-		rd_monster(&m_dummy);
+		if (rd_monster(&m_dummy, FALSE)) return 29;
 		//object_desc(0, overflow_msg, &m_dummy, FALSE, 0);
 		//s_printf(" DISCARDED: %s\n", overflow_msg);
 	}

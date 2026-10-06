@@ -8325,9 +8325,6 @@ static bool project_m(int Ind, int who, int y_origin, int x_origin, int r, struc
 
 		/* :) */
 		if (m_ptr->r_idx == RI_LEPER) {
-			int clone = m_list[c_ptr->m_idx].clone, clone_summoning = m_list[c_ptr->m_idx].clone_summoning;
-
-			delete_monster_idx(c_ptr->m_idx, TRUE);
 			switch (rand_int(10)) {
 			case 0: i = 1; break;
 			case 1: i = 6; break;
@@ -8340,7 +8337,7 @@ static bool project_m(int Ind, int who, int y_origin, int x_origin, int r, struc
 			case 8: i = 17; break;
 			case 9: i = 18; break;
 			}
-			(void)place_monster_aux(wpos, y, x, i, FALSE, FALSE, clone, clone_summoning);
+			(void)replace_monster(c_ptr->m_idx, i);
 		}
 		break;
 
@@ -10378,8 +10375,6 @@ static bool project_m(int Ind, int who, int y_origin, int x_origin, int r, struc
 
 		/* Handle polymorh */
 		if (i != m_ptr->r_idx) {
-			int clone, clone_summoning;
-
 			/* Obvious */
 			if (seen) obvious = TRUE;
 
@@ -10391,15 +10386,7 @@ static bool project_m(int Ind, int who, int y_origin, int x_origin, int r, struc
 			dam = 0;
 			quiet_dam = TRUE;
 
-			/* Save clone status - mikaelh */
-			clone = m_list[c_ptr->m_idx].clone;
-			clone_summoning = m_list[c_ptr->m_idx].clone_summoning;
-
-			/* "Kill" the "old" monster */
-			delete_monster_idx(c_ptr->m_idx, TRUE);
-
-			/* Create a new monster (no groups) */
-			(void)place_monster_aux(wpos, y, x, i, FALSE, FALSE, clone, clone_summoning);
+			(void)replace_monster(c_ptr->m_idx, i);
 
 			/* XXX XXX XXX Hack -- Assume success */
 			if (!quiet && c_ptr->m_idx == 0) {
@@ -10741,23 +10728,13 @@ static bool project_m(int Ind, int who, int y_origin, int x_origin, int r, struc
 
 		/* Handle polymorh */
 		if (i != m_ptr->r_idx) {
-			int clone, clone_summoning;
-
 			/* Obvious */
 			if (seen) obvious = TRUE;
 
 			/* Monster polymorphs */
 			note = " changes";
 
-			/* Save clone status - mikaelh */
-			clone = m_list[c_ptr->m_idx].clone;
-			clone_summoning = m_list[c_ptr->m_idx].clone_summoning;
-
-			/* "Kill" the "old" monster */
-			delete_monster_idx(c_ptr->m_idx, TRUE);
-
-			/* Create a new monster (no groups) */
-			(void)place_monster_aux(wpos, y, x, i, FALSE, FALSE, clone, clone_summoning);
+			(void)replace_monster(c_ptr->m_idx, i);
 
 			/* XXX XXX XXX Hack -- Assume success */
 			if (!quiet) {

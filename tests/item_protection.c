@@ -8,6 +8,8 @@ static object_type inventory[INVEN_TOTAL], floor_objects[2];
 static int random_result = -1, floor_deletions;
 static cptr inscriptions[] = {""};
 
+void test_random_result(int result) { random_result = result; }
+
 s32b __real_Rand_div(s32b m);
 s32b __wrap_Rand_div(s32b m) {
 	return random_result < 0 ? __real_Rand_div(m) : (m > 1 ? random_result : 0);

@@ -1014,6 +1014,7 @@ static bool questor_monster(int q_idx, qi_questor *q_questor, int questor_idx) {
 
 	r_ptr->freq_innate = rbase_ptr->freq_innate;
 	r_ptr->freq_spell = rbase_ptr->freq_spell;
+	r_ptr->spell_interval = rbase_ptr->spell_interval;
 
 #ifdef MONSTER_ASTAR
 	if (r_ptr->flags7 & RF7_ASTAR) {

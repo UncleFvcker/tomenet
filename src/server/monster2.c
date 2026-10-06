@@ -21,6 +21,34 @@
  */
 #define CLONE_EGO_CHANCE	15
 
+/* Family slots are independent of monster slots and survive the mother's death. */
+static struct {
+	u16b living;
+	byte births;
+} repro_families[MAX_M_IDX];
+
+void monster_families_reset(void) { memset(repro_families, 0, sizeof(repro_families)); }
+
+byte monster_family_births(monster_type *m_ptr) {
+	return repro_families[m_ptr->repro_family].births;
+}
+
+bool monster_family_restore(monster_type *m_ptr, byte births) {
+	u16b family = m_ptr->repro_family;
+	if (!family) return births == 0;
+	if (family >= MAX_M_IDX || !births || births > MAX_REPRO ||
+	    (repro_families[family].living && repro_families[family].births != births) ||
+	    repro_families[family].living >= births + 1) return FALSE;
+	repro_families[family].births = births;
+	repro_families[family].living++;
+	return TRUE;
+}
+
+static void monster_family_leave(monster_type *m_ptr) {
+	u16b family = m_ptr->repro_family;
+	if (family && --repro_families[family].living == 0) repro_families[family].births = 0;
+}
+
 /*
  * Descriptions from PernAngband.	- Jir -
  */
@@ -454,6 +482,7 @@ void delete_monster_idx(int i, bool unfound_arts) {
 	if (m_ptr->r_idx == RI_MORGOTH && !in_irondeepdive(wpos)) Morgoth_x = -1;
 
 	/* Wipe the Monster */
+	monster_family_leave(m_ptr);
 	FREE(m_ptr->r_ptr, monster_race);
 	WIPE(m_ptr, monster_type);
 }
@@ -5156,6 +5185,7 @@ bool multiply_monster(int m_idx) {
 	int		i, y, x;
 
 	bool result = FALSE;
+	u16b family = m_ptr->repro_family;
 	struct worldpos *wpos = &m_ptr->wpos;
 	cave_type **zcave;
 
@@ -5166,6 +5196,7 @@ bool multiply_monster(int m_idx) {
 
 	/* Don't keep cloning forever */
 	if (m_ptr->clone > 90) return(FALSE);
+	if (monster_family_births(m_ptr) >= MAX_REPRO) return FALSE;
 
 	/* No uniques or special event monsters */
 	if ((r_ptr->flags1 & RF1_UNIQUE) || (r_ptr->flags8 & RF8_PSEUDO_UNIQUE)
@@ -5176,6 +5207,12 @@ bool multiply_monster(int m_idx) {
 	    /* No non-spawning monsters */
 	    || !r_ptr->rarity)
 		return(FALSE);
+
+	if (!family) {
+		for (family = 1; family < MAX_M_IDX; family++)
+			if (!repro_families[family].living) break;
+		if (family == MAX_M_IDX) return FALSE;
+	}
 
 	/* Try up to 18 times */
 	for (i = 0; i < 18; i++) {
@@ -5189,12 +5226,40 @@ bool multiply_monster(int m_idx) {
 		    (m_ptr->ego && magik(CLONE_EGO_CHANCE)) ? m_ptr->ego :
 		    pick_ego_monster(m_ptr->r_idx, getlevel(&m_ptr->wpos)),
 		    0, FALSE, m_ptr->clone + 10, m_ptr->clone_summoning + 1) == 0;
+		if (result) {
+			if (!m_ptr->repro_family) {
+				m_ptr->repro_family = family;
+				repro_families[family].living = 1;
+			}
+			repro_families[family].births++;
+			repro_families[family].living++;
+			m_list[zcave[y][x].m_idx].repro_family = family;
+		}
 		/* Done */
 		break;
 	}
 
 	/* Result */
 	return(result);
+}
+
+/* Polymorph replaces a record, but must not reset the creature's quota or cooldown. */
+bool replace_monster(int m_idx, int r_idx) {
+	monster_type old = m_list[m_idx];
+	cave_type **zcave = getcave(&old.wpos);
+	if (!zcave) return FALSE;
+	m_list[m_idx].repro_family = 0; /* Hold its family membership during replacement. */
+	delete_monster_idx(m_idx, TRUE);
+	place_monster_aux(&old.wpos, old.fy, old.fx, r_idx, FALSE, FALSE, old.clone, old.clone_summoning);
+	m_idx = zcave[old.fy][old.fx].m_idx;
+	if (!m_idx) {
+		monster_family_leave(&old);
+		return FALSE;
+	}
+	m_list[m_idx].repro_family = old.repro_family;
+	m_list[m_idx].spell_cooldown = old.spell_cooldown;
+	m_list[m_idx].spell_cooldown_energy = old.spell_cooldown_energy;
+	return TRUE;
 }
 
 
@@ -5891,6 +5956,7 @@ monster_race* race_info_idx(int r_idx, int ego, int randuni) {
 
 	nr_ptr->freq_innate = re_ptr->freq_innate;
 	nr_ptr->freq_spell = re_ptr->freq_spell;
+	nr_ptr->spell_interval = re_ptr->spell_interval;
 
 	MODIFY(nr_ptr->level, re_ptr->level, 1);
 

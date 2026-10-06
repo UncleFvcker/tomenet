@@ -4722,6 +4722,8 @@ errr init_r_info_txt(FILE *fp, char *buf) {
 				/* XXX XXX XXX Hack -- Read spell frequency */
 				if (1 == sscanf(s, "1_IN_%d", &i)) {
 					/* Extract a "frequency" */
+					if (i < 1 || i > 100) return 5;
+					r_ptr->spell_interval = i;
 					r_ptr->freq_spell = r_ptr->freq_innate = 100 / i;
 
 					/* Start at next entry */
@@ -5653,6 +5655,8 @@ errr init_re_info_txt(FILE *fp, char *buf) {
 				/* XXX XXX XXX Hack -- Read spell frequency */
 				if (1 == sscanf(s, "1_IN_%d", &i)) {
 					/* Extract a "frequency" */
+					if (i < 1 || i > 100) return 5;
+					re_ptr->spell_interval = i;
 					re_ptr->freq_spell = re_ptr->freq_innate = 100 / i;
 
 					/* Start at next entry */

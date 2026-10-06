@@ -6,6 +6,7 @@ Also checks the Skill potion's allocation data and actual potion effect.
 Checks free respec, bonus-point persistence and legacy zero-word compatibility.
 Checks unlimited world recall range with the original exploration requirement.
 Checks staff recharge failures and magic ammunition damage protection.
+Checks family reproduction quotas, spell cooldowns and monster save compatibility.
 """
 from pathlib import Path
 import re
@@ -43,7 +44,7 @@ for obj in objects:
 subprocess.run(["make", "-f", "makefile.win", "-j4", "CFLAGS=" + " ".join(FLAGS),
                 "LUACFLAGS=" + " ".join(FLAGS), *objects], cwd=SRC, check=True)
 test_sources = [ROOT / "tests" / name for name in
-                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c")]
+                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c", "monster_rules.c")]
 wrappers = re.findall(r"__wrap_(\w+)\(", "\n".join(path.read_text() for path in test_sources))
 output_root = ROOT / ".github/workspace"
 output_root.mkdir(parents=True, exist_ok=True)
@@ -66,11 +67,64 @@ with tempfile.TemporaryDirectory(prefix="everlasting-", dir=output_root) as temp
     spells_object = temp / "spells-test.o"
     subprocess.run(["gcc", *FLAGS, "-c", str(spells_source), "-o", str(spells_object)],
                    cwd=SRC, check=True)
+    # Test private AI and record serialization without adding production entry points.
+    extra_objects = []
+    for name, shim in {
+        "melee2": '''
+void test_cooldown_start(monster_type *m, int chance) { monster_spell_cooldown_start(m, chance); }
+void test_cooldown_charge(monster_type *m, int energy) { monster_spell_cooldown_charge(m, energy); }
+void test_cooldown_end(monster_type *m) { monster_spell_cooldown_end_turn(m); }
+bool test_monster_moves(int m_idx) { int moves[8] = {0}; return get_moves(1, m_idx, moves); }
+''',
+        "monster2": "",
+        "save": '''
+void test_write_monsters(FILE *file, monster_type *monsters, int count, bool legacy) {
+    static byte buffer[MAX_BUF_SIZE];
+    fff = file; fff_buf = buffer; fff_buf_pos = 0; xor_byte = 0; v_stamp = x_stamp = 0;
+    wr_u16b(count);
+    for (int i = 0; i < count; i++) {
+        wr_monster(&monsters[i]);
+        if (legacy) { /* 4.9.25 plain records omit the six new tail bytes. */
+            fff_buf_pos -= 6;
+            xor_byte = fff_buf[fff_buf_pos - 1];
+        }
+    }
+    wr_u32b(0x12345678); write_buffer(); fff = NULL; fff_buf = NULL;
+}
+''',
+        "load2": '''
+bool test_read_monsters(FILE *file, monster_type *monsters, int capacity, bool legacy) {
+    static byte buffer[MAX_BUF_SIZE]; u16b count; u32b marker;
+    fff = file; fff_buf = buffer; fff_buf_pos = MAX_BUF_SIZE; xor_byte = 0; v_check = x_check = 0;
+    sf_major = ssf_major = 4; sf_minor = ssf_minor = 9; sf_patch = ssf_patch = legacy ? 25 : 26;
+    rd_u16b(&count);
+    if (count != capacity) return FALSE;
+    for (int i = 0; i < count; i++) if (rd_monster(&monsters[i], TRUE)) return FALSE;
+    rd_u32b(&marker); fff = NULL; fff_buf = NULL;
+    return marker == 0x12345678;
+}
+'''
+    }.items():
+        source = temp / (name + "-test.c")
+        body = (SRC / "server" / (name + ".c")).read_text()
+        if name == "melee2":
+            body = body.replace('#include "angband.h"', '#include "angband.h"\nint get_moves_astar(int Ind, int m_idx, int *yp, int *xp);')
+            body = body.replace("static int get_moves_astar(", "int test_native_get_moves_astar(")
+        if name == "monster2":
+            # Isolate placement/ego selection I/O; quota, deletion and compaction stay real.
+            body = body.replace("int place_monster_one(struct", "int test_native_place_monster_one(struct")
+            body = body.replace("int pick_ego_monster(int r_idx, int Level) {",
+                                "int test_native_pick_ego_monster(int r_idx, int Level) {")
+        source.write_text(body + shim)
+        obj = temp / (name + "-test.o")
+        subprocess.run(["gcc", *FLAGS, "-c", str(source), "-o", str(obj)], cwd=SRC, check=True)
+        extra_objects.append(str(obj))
     for instant_res in (True, False):
         case_flags = FLAGS.copy()
         case_objects = [obj for obj in objects if obj not in
-                        ("server/main.o", "server/dungeon.o", "server/spells1.o")]
-        case_objects.extend([str(dungeon_object), str(spells_object)])
+                        ("server/main.o", "server/dungeon.o", "server/spells1.o",
+                         "server/melee2.o", "server/monster2.o", "server/save.o", "server/load2.o")]
+        case_objects.extend([str(dungeon_object), str(spells_object), *extra_objects])
         if not instant_res:
             header = temp / "without-instant-res.h"
             header.write_text('#define SERVER\n#include "angband.h"\n#undef ENABLE_INSTANT_RES\n')

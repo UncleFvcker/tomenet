@@ -13,13 +13,15 @@ static int recalls, legacy_path;
 static bool real_recall;
 static bool disconnect_recall;
 static cave_type cave_cell, *cave_rows[] = {&cave_cell};
+static cave_type **monster_test_cave;
 static jmp_buf legacy_jump;
 
 void test_floor_item(int idx) { real_recall = idx > 0; cave_cell.o_idx = idx; }
+void test_monster_cave(cave_type **cave) { monster_test_cave = cave; }
 
 dungeon_type *__wrap_getdungeon(worldpos *wpos) { return &test_dungeon; }
 dun_level *__wrap_getfloor(worldpos *wpos) { return &floor_info; }
-cave_type **__wrap_getcave(worldpos *wpos) { return real_recall ? cave_rows : NULL; }
+cave_type **__wrap_getcave(worldpos *wpos) { return monster_test_cave ? monster_test_cave : (real_recall ? cave_rows : NULL); }
 int __wrap_getlevel(worldpos *wpos) { return ABS(wpos->wz); }
 cptr __wrap_get_ptitle(player_type *p, bool short_form) { return "Tester"; }
 int __wrap_get_esp_link(int Ind, u32b flags, player_type **p) { return 0; }
@@ -148,6 +150,7 @@ static void check_death(void) {
 void check_skill_potion(void);
 void check_skill_respec(void);
 void check_item_protection(void);
+void check_monster_rules(void);
 void test_do_recall(int Ind);
 
 static void check_world_recall(void) {
@@ -193,6 +196,7 @@ int main(void) {
 	check_skill_potion();
 	check_skill_respec();
 	check_world_recall();
+	check_monster_rules();
 	/* Preserve ordinary disconnect protection; Everlasting still revives fully. */
 	setup(); Conn[0]->last_keepalive_recv.tv_sec -= 3; check_death();
 	setup(); player.mode = 0; Conn[0]->last_keepalive_recv.tv_sec -= 3;

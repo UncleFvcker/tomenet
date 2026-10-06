@@ -344,6 +344,7 @@ static void wr_monster_race(monster_race *r_ptr) {
 		wr_byte(r_ptr->blow[i].d_dice);
 		wr_byte(r_ptr->blow[i].d_side);
 	}
+	wr_byte(r_ptr->spell_interval);
 }
 
 /*
@@ -428,6 +429,11 @@ static void wr_monster(monster_type *m_ptr) {
 	wr_s32b(m_ptr->related);
 	wr_byte(m_ptr->related_type);
 	wr_s32b(m_ptr->custom_xp);
+	wr_u16b(m_ptr->repro_family);
+	/* Repeat the shared count in each member's record; restore a single runtime counter. */
+	wr_byte(monster_family_births(m_ptr));
+	wr_byte(m_ptr->spell_cooldown);
+	wr_u16b(m_ptr->spell_cooldown_energy);
 }
 
 /*

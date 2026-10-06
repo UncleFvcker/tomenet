@@ -419,6 +419,7 @@ struct monster_race {
 	   They are even averaged just for the heck of it in all places where they are used, for no apparent reason.. */
 	byte freq_innate;		/* Innate spell frequency */
 	byte freq_spell;		/* Other spell frequency */
+	byte spell_interval;		/* Original 1_IN_N denominator */
 
 	u32b flags1;			/* Flags 1 (general) */
 	u32b flags2;			/* Flags 2 (abilities) */
@@ -2182,6 +2183,9 @@ struct monster_type {
 
 	u16b clone;			/* clone value */
 	u16b clone_summoning;		/* counter to keep track of summoning */
+	u16b repro_family;		/* Shared cumulative reproduction quota */
+	byte spell_cooldown;		/* Remaining own action turns */
+	u16b spell_cooldown_energy;	/* Energy towards the next cooldown turn */
 
 	s16b mind;			/* Current action (golems, pets) -- Now also use for new AI_HYBRID (added for Tzeentch) */
 
@@ -2290,6 +2294,7 @@ struct monster_ego {
 
 	byte freq_innate;		/* Innate spell frequency */
 	byte freq_spell;		/* Other spell frequency */
+	byte spell_interval;		/* Original 1_IN_N denominator */
 
 	/* Ego flags */
 	u32b flags1;			/* Flags 1 */
