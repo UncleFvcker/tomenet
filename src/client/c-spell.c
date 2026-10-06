@@ -1839,22 +1839,8 @@ bool item_tester_hook_starid(object_type *o_ptr) {
 }
 
 bool item_tester_hook_rune_enchant(object_type *o_ptr) {
-	byte tval = o_ptr->tval;
-	if ((tval == TV_MSTAFF)
-	    || (tval == TV_SWORD)
-	    || (tval == TV_AXE)
-	    || (tval == TV_BLUNT)
-	    || (tval == TV_POLEARM)
-	    || (tval == TV_SHIELD)
-	    || (tval == TV_SOFT_ARMOR)
-	    || (tval == TV_HARD_ARMOR)
-	    || (tval == TV_DRAG_ARMOR)
-	    || (tval == TV_CLOAK)
-	    || (tval == TV_CROWN)
-	    || (tval == TV_HELM)
-	    || (tval == TV_GLOVES)
-	    || (tval == TV_BOOTS)) return(TRUE);
-	return(FALSE);
+	/* USE_EQUIP already limits selection to occupied equipment slots. */
+	return(TRUE);
 }
 
 void do_runecraft() {

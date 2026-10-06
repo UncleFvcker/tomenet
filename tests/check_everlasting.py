@@ -7,6 +7,8 @@ Checks free respec, bonus-point persistence and legacy zero-word compatibility.
 Checks unlimited world recall range with the original exploration requirement.
 Checks staff recharge failures and magic ammunition damage protection.
 Checks family reproduction quotas, spell cooldowns and monster save compatibility.
+Checks level-zero item sharing and the remaining level/mode restrictions.
+Checks physical runes on all slots and artifacts, without artifact-generation PVAL caps.
 """
 from pathlib import Path
 import re
@@ -44,7 +46,7 @@ for obj in objects:
 subprocess.run(["make", "-f", "makefile.win", "-j4", "CFLAGS=" + " ".join(FLAGS),
                 "LUACFLAGS=" + " ".join(FLAGS), *objects], cwd=SRC, check=True)
 test_sources = [ROOT / "tests" / name for name in
-                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c", "monster_rules.c")]
+                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c", "item_sharing.c", "physical_runes.c", "monster_rules.c")]
 wrappers = re.findall(r"__wrap_(\w+)\(", "\n".join(path.read_text() for path in test_sources))
 output_root = ROOT / ".github/workspace"
 output_root.mkdir(parents=True, exist_ok=True)

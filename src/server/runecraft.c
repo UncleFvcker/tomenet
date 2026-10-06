@@ -28,33 +28,25 @@ bool rune_enchant(int Ind, int item) {
 	byte sval;
 
 	/* Not worn? */
-	if (item < INVEN_WIELD || item >= SUBINVEN_INVEN_MUL) {
+	if (item < INVEN_WIELD || item >= INVEN_TOTAL) {
 		msg_print(Ind, "You must be wearing that to attune the rune."); //yo
 		return(FALSE);
 	}
 
 	if (!get_inven_item(Ind, item, &o_ptr)) return(FALSE);
 
-	/* Artifact? */
-	if (o_ptr->name1) {
-		msg_print(Ind, "The artifact is unaffected by your attempts!");
-		return(FALSE);
-	}
+	if (!o_ptr->k_idx || !o_ptr->number) return(FALSE);
 
 	/* One sigil per element! */
 	if (!get_inven_item(Ind, p_ptr->current_activation, &r_ptr)) return(FALSE);
+	if (r_ptr->tval != TV_RUNE || !r_ptr->number) return(FALSE);
 	sval = r_ptr->sval;
 
-	if (((p_ptr->inventory[INVEN_WIELD].sigil == sval) && item != INVEN_WIELD)
-	 || ((p_ptr->inventory[INVEN_ARM].sigil == sval) && item != INVEN_ARM)
-	 || ((p_ptr->inventory[INVEN_BODY].sigil == sval) && item != INVEN_BODY)
-	 || ((p_ptr->inventory[INVEN_OUTER].sigil == sval) && item != INVEN_OUTER)
-	 || ((p_ptr->inventory[INVEN_HEAD].sigil == sval) && item != INVEN_HEAD)
-	 || ((p_ptr->inventory[INVEN_HANDS].sigil == sval) && item != INVEN_HANDS)
-	 || ((p_ptr->inventory[INVEN_FEET].sigil == sval) && item != INVEN_FEET)) {
-		msg_format(Ind, "You may only inscribe one sigil per element.");
-		return(FALSE);
-	}
+	for (int slot = INVEN_WIELD; slot < INVEN_TOTAL; slot++)
+		if (slot != item && p_ptr->inventory[slot].k_idx && p_ptr->inventory[slot].sigil == sval) {
+			msg_format(Ind, "You may only inscribe one sigil per element.");
+			return(FALSE);
+		}
 
 	/* Store the SVAL and SSEED */
 	o_ptr->sigil = sval;

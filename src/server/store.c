@@ -4333,15 +4333,13 @@ void store_purchase(int Ind, int item, int amt) {
 
 	/* Check if the player is powerful enough for that item */
 	if (o_ptr->owner && o_ptr->owner != p_ptr->id &&
-	    (o_ptr->level > p_ptr->lev || o_ptr->level == 0)) {
+	    o_ptr->level > p_ptr->lev) {
 		if (cfg.anti_cheeze_pickup) {
-			if (!o_ptr->level) msg_print(Ind, "Only its owner can pick up that item!");
-			else msg_format(Ind, "You must be level %d or higher to pick up that item!", o_ptr->level);
+			msg_format(Ind, "You must be level %d or higher to pick up that item!", o_ptr->level);
 			if (!is_admin(p_ptr)) return;
 		}
 		if (true_artifact_p(o_ptr) && cfg.anti_arts_pickup) {
-			if (!o_ptr->level) msg_print(Ind, "Only its owner can pick up that artifact!");
-			else msg_format(Ind, "You must be level %d or higher to pick up that artifact!", o_ptr->level);
+			msg_format(Ind, "You must be level %d or higher to pick up that artifact!", o_ptr->level);
 			if (!is_admin(p_ptr)) return;
 		}
 	}
@@ -6236,8 +6234,7 @@ static int home_object_similar(int Ind, object_type *j_ptr, object_type *o_ptr, 
 	if (Ind) {
 		p_ptr = Players[Ind];
 		if (((o_ptr->owner != j_ptr->owner)
-		    && ((qlev < j_ptr->level)
-		    || (j_ptr->level < 1)))
+		    && (qlev < j_ptr->level))
 		    && (j_ptr->owner)) return(FALSE);
 #if 0
 		if ((o_ptr->owner != p_ptr->id)
@@ -7171,22 +7168,13 @@ void home_purchase(int Ind, int item, int amt) {
 
 	/* Check if the player is powerful enough for that item */
 	if (o_ptr->owner && o_ptr->owner != p_ptr->id &&
-	    (o_ptr->level > p_ptr->lev || o_ptr->level == 0)) {
+	    o_ptr->level > p_ptr->lev) {
 		if (cfg.anti_cheeze_pickup) {
-			if (o_ptr->level) {
-				msg_format(Ind, "You must be level %d or higher to pick up that item!", o_ptr->level);
-				if (!is_admin(p_ptr)) return;
-			}
-#if 1 /* doesn't matter probably? */
-			else {
-				msg_print(Ind, "You cannot pick up a zero-level item that doesn't belong to you.");
-				if (!is_admin(p_ptr)) return;
-			}
-#endif
+			msg_format(Ind, "You must be level %d or higher to pick up that item!", o_ptr->level);
+			if (!is_admin(p_ptr)) return;
 		}
 		if (true_artifact_p(o_ptr) && cfg.anti_arts_pickup) {
-			if (!o_ptr->level) msg_print(Ind, "You cannot pick up a zero-level artifact that doesn't belong to you.");
-			else msg_format(Ind, "You must be level %d or higher to pick up that artifact!", o_ptr->level);
+			msg_format(Ind, "You must be level %d or higher to pick up that artifact!", o_ptr->level);
 			if (!is_admin(p_ptr)) return;
 		}
 	}

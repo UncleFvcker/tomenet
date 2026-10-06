@@ -1737,19 +1737,6 @@ void do_cmd_drop(int Ind, int item, int quantity) {
 	}
 #endif
 
-	/* Stop littering towns */
-	if (o_ptr->level == 0 &&
-	    //o_ptr->owner == p_ptr->id &&
-	    istown(&p_ptr->wpos) &&
-	    !exceptionally_shareable_item(o_ptr) && o_ptr->tval != TV_GAME &&
-	    !(o_ptr->tval == TV_PARCHMENT && (o_ptr->sval == SV_DEED_HIGHLANDER || o_ptr->sval == SV_DEED_DUNGEONKEEPER))) {
-		msg_print(Ind, "\377yPlease don't litter the town with level 0 items which are unusable");
-		if (p_ptr->rogue_like_commands)
-			msg_print(Ind, "\377y by other players. Use '\377oCTRL+d\377y' to destroy an item instead.");
-		else
-			msg_print(Ind, "\377y by other players. Use '\377ok\377y' to destroy an item instead.");
-		if (!is_admin(p_ptr)) return;
-	}
 	/* Stop littering inns */
 	if (zcave && inside_inn(p_ptr, &zcave[p_ptr->py][p_ptr->px])) {
 		/* No nothingness / curse-no-drop + heavy-curse stuff */
@@ -3218,7 +3205,7 @@ void do_cmd_steal_from_monster(int Ind, int m_idx) {
 			    || (true_artifact_p(o_ptr) && !winner_artifact_p(o_ptr) &&
 			    p_ptr->total_winner && cfg.kings_etiquette)
 #ifndef RPG_SERVER
-			    || ((o_ptr->level > p_ptr->lev || o_ptr->level == 0) &&
+			    || (o_ptr->level > p_ptr->lev &&
 			    !in_irondeepdive(&p_ptr->wpos) &&
 			    (cfg.anti_cheeze_pickup || (true_artifact_p(o_ptr) && cfg.anti_arts_pickup)))
 #endif
@@ -3277,7 +3264,7 @@ void do_cmd_steal_from_monster(int Ind, int m_idx) {
 
 				can_use(Ind, o_ptr);
 				/* for Ironman Deep Dive Challenge cross-trading */
-				o_ptr->mode = p_ptr->mode;
+				o_ptr->mode = (o_ptr->mode & MODE_STARTER_ITEM) | p_ptr->mode;
 
 				/* Check whether this item was requested by an item-retrieval quest */
 				if (p_ptr->quest_any_r_within_target) quest_check_goal_r(Ind, o_ptr);
@@ -3718,7 +3705,7 @@ void do_cmd_steal(int Ind, int dir) {
 			    || (true_artifact_p(o_ptr) && !winner_artifact_p(o_ptr) &&
 			    p_ptr->total_winner && cfg.kings_etiquette)
 #ifndef RPG_SERVER
-			    || ((o_ptr->level > p_ptr->lev || o_ptr->level == 0) &&
+			    || (o_ptr->level > p_ptr->lev &&
 			    !in_irondeepdive(&p_ptr->wpos) &&
 			    (cfg.anti_cheeze_pickup || (true_artifact_p(o_ptr) && cfg.anti_arts_pickup)))
 #endif
@@ -3777,7 +3764,7 @@ void do_cmd_steal(int Ind, int dir) {
 
 				can_use(Ind, o_ptr);
 				/* for Ironman Deep Dive Challenge cross-trading */
-				o_ptr->mode = p_ptr->mode;
+				o_ptr->mode = (o_ptr->mode & MODE_STARTER_ITEM) | p_ptr->mode;
 
 				/* Check whether this item was requested by an item-retrieval quest */
 				if (p_ptr->quest_any_r_within_target) quest_check_goal_r(Ind, o_ptr);

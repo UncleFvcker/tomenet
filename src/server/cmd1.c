@@ -1955,7 +1955,7 @@ s_printf("bugtracking: name1=%d, owner=%d(%s), carrier=%d, p-id=%d(%s)\n", o_ptr
 
 	can_use(Ind, o_ptr);
 	/* for Ironman Deep Dive Challenge cross-trading */
-	o_ptr->mode = p_ptr->mode;
+	o_ptr->mode = (o_ptr->mode & MODE_STARTER_ITEM) | p_ptr->mode;
 
 #ifdef ENABLE_SUBINVEN
 	/* ('empty-chest-hack') - Auto-remove 'empty' marker if we pick it up */
@@ -2600,19 +2600,11 @@ void carry(int Ind, int pickup, int confirm, bool pick_one) {
 /* the_sandman: item lvl restrictions are disabled in rpg */
 #ifndef RPG_SERVER
 		if (o_ptr->owner && o_ptr->owner != p_ptr->id &&
-		    (o_ptr->level > p_ptr->lev || o_ptr->level == 0) &&
+		    o_ptr->level > p_ptr->lev &&
 		    !in_irondeepdive(&p_ptr->wpos)) {
 			if (cfg.anti_cheeze_pickup) {
-				if (o_ptr->level) {
-					msg_format(Ind, "You must be level %d or higher to pick up that item!", o_ptr->level);
-					if (!is_admin(p_ptr)) return;
-				}
- #if 1 /* doesn't matter probably? Food exchange was already done above. */
-				else {
-					msg_print(Ind, "You cannot pick up a zero-level item that doesn't belong to you.");
-					if (!is_admin(p_ptr)) return;
-				}
- #endif
+				msg_format(Ind, "You must be level %d or higher to pick up that item!", o_ptr->level);
+				if (!is_admin(p_ptr)) return;
 			/* new: this is to prevent newbies to pick up all nearby stuff with their
 			   level 1 char aimlessly without being able to drop it again. */
 			} else if (p_ptr->max_plv < cfg.newbies_cannot_drop) {
@@ -2630,8 +2622,7 @@ void carry(int Ind, int pickup, int confirm, bool pick_one) {
 			else if (true_artifact_p(o_ptr) && cfg.anti_arts_pickup)
 			//else if (artifact_p(o_ptr) && cfg.anti_arts_pickup)
 			{
-				if (o_ptr->level == 0) msg_print(Ind, "You cannot pick up a zero-level artifact that you don't own.");
-				else msg_format(Ind, "You must be level %d or higher to pick up that artifact!", o_ptr->level);
+				msg_format(Ind, "You must be level %d or higher to pick up that artifact!", o_ptr->level);
 				if (!is_admin(p_ptr)) return;
 			}
 			else if (o_ptr->tval == TV_JUNK && o_ptr->sval == SV_GLASS_SHARD) {

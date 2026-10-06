@@ -25132,7 +25132,7 @@ or in the collection of monsters fascinated by their magic. Certain secretive
 markets are also known to trade these rare embodiments of elemental power...
 
 Physical runes may be activated (after achieving skill level 40 with the
-appropriate elements) to emblazon a non-artifact armour, shield or melee weapon
+appropriate elements) to emblazon any worn equipment, including artifacts,
 with an elemental sigil. This sigil confers a generally positive boni effect as
 long as the equipment remains wielded. Sigils vanish from equipment when sold,
 dropped, taken off, disarmed, etc. Applying an additional physical rune dispels
@@ -25141,15 +25141,15 @@ resulting boni is identical to that which was previously conferred).
 
 The process for determining success and which boni is applied depends on both a
 pool of available effects, listed in (7.8c) Runespell Tables, Sigil Boni, and
-on rules similar to artifact creation (see (9.4) Artifact creation). Existing
-enchantments may synergize with or couteract some sigil boni (eg. PVAL) and are
-limited in effect by the same restrictions that constrain artifact creation.
+on the equipment type and its existing enchantments. Numeric sigil boni use
+the equipment's existing PVAL, without artifact-creation magnitude or combined
+property limits; for example, PVAL +10 can confer +10 speed.
 Duplicate effects are never applied, and boni only increase in potency (eg.
 fire resistance will be replaced with immunity, never the other way around).
 Sigil boni may always result in resistance to the element of the physical rune,
 if such a resistance exists (that is, not inertia/gravity/hellfire/force).
 
-Runemasters are limited to one sigil per element, but can maintain 7 in total.
+Runemasters are limited to one sigil per element across all equipment slots.
 
 
 Other Uses for Runes:
@@ -25339,8 +25339,8 @@ Flare      |  35 | Briefly engulfs a target for high damage, causes backlash.
 Sigil Boni
 ----------
 A table cross referencing boni to element and item TVAL (type value). Boni are
-restricted as with artifact creation regarding PVAL modifiers. Stat enhancing
-boni have a chance to include a sustain, and boni occuring both generally and
+not subject to artifact-creation PVAL limits. Stat enhancing boni have a chance
+to include a sustain, and boni occuring both generally and
 on the item type specifically are more likely to occur. Some weapon/helm boni
 are specific to staves, boomerangs, and crowns (see (9.4) Artifact creation).
 

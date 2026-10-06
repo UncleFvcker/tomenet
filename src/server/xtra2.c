@@ -15135,7 +15135,7 @@ void telekinesis_aux(int Ind, int item) {
 	/* the_sandman: item lvl restrictions are disabled in rpg */
 #ifndef RPG_SERVER
 	if (q_ptr->owner && q_ptr->owner != p2_ptr->id &&
-	    (q_ptr->level > p2_ptr->lev || q_ptr->level == 0)) {
+	    q_ptr->level > p2_ptr->lev) {
 		if (cfg.anti_cheeze_telekinesis) {
 			msg_print(Ind, "The target isn't powerful enough yet to receive that item!");
 			if (!is_admin(p_ptr)) return;

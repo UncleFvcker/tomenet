@@ -32,6 +32,7 @@ int __wrap_s_printf(const char *fmt, ...) {
 	return 0;
 }
 int __wrap_l_printf(char *fmt, ...) { return 0; }
+int __wrap_c_printf(char *fmt, ...) { return 0; }
 void __wrap_plog(cptr msg) {}
 void __wrap_msg_print(int Ind, cptr msg) {}
 void __wrap_msg_broadcast(int Ind, cptr msg) {}
@@ -150,6 +151,8 @@ static void check_death(void) {
 void check_skill_potion(void);
 void check_skill_respec(void);
 void check_item_protection(void);
+void check_item_sharing(void);
+void check_physical_runes(void);
 void check_monster_rules(void);
 void test_do_recall(int Ind);
 
@@ -193,6 +196,8 @@ int main(void) {
 	Players = players;
 	Conn = connections;
 	check_item_protection();
+	check_item_sharing();
+	check_physical_runes();
 	check_skill_potion();
 	check_skill_respec();
 	check_world_recall();

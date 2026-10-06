@@ -4095,8 +4095,7 @@ int object_similar(int Ind, object_type *o_ptr, object_type *j_ptr, s16b toleran
 	if (Ind) {
 		p_ptr = Players[Ind];
 		if (((o_ptr->owner != j_ptr->owner)
-		    && ((p_ptr->lev < j_ptr->level)
-		    || (j_ptr->level < 1)))
+		    && (p_ptr->lev < j_ptr->level))
 		    && (j_ptr->owner))
 			return(FALSE);
 		if ((o_ptr->owner != p_ptr->id)
