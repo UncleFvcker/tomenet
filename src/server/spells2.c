@@ -4841,8 +4841,12 @@ bool recharge_aux(int Ind, int item, int pow) {
 
 		/* Back-fire XXX XXX XXX */
 		if (rand_int(i) == 0) {
-			/* a chance to just discharge it instead of destroying it */
-			if (rand_int(in_irondeepdive(&p_ptr->wpos) ? 6 : 2)) {
+			/* Staves can lose charges on failure, but never break. */
+			if (o_ptr->tval == TV_STAFF
+#ifdef MSTAFF_MDEV_COMBO
+			    || (o_ptr->tval == TV_MSTAFF && o_ptr->xtra1)
+#endif
+			    || rand_int(in_irondeepdive(&p_ptr->wpos) ? 6 : 2)) {
 				msg_print(Ind, "There is a static discharge.");
 				o_ptr->pval = 0;
 				o_ptr->ident |= ID_EMPTY;

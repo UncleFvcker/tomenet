@@ -15,6 +15,8 @@ static bool disconnect_recall;
 static cave_type cave_cell, *cave_rows[] = {&cave_cell};
 static jmp_buf legacy_jump;
 
+void test_floor_item(int idx) { real_recall = idx > 0; cave_cell.o_idx = idx; }
+
 dungeon_type *__wrap_getdungeon(worldpos *wpos) { return &test_dungeon; }
 dun_level *__wrap_getfloor(worldpos *wpos) { return &floor_info; }
 cave_type **__wrap_getcave(worldpos *wpos) { return real_recall ? cave_rows : NULL; }
@@ -145,6 +147,7 @@ static void check_death(void) {
 
 void check_skill_potion(void);
 void check_skill_respec(void);
+void check_item_protection(void);
 void test_do_recall(int Ind);
 
 static void check_world_recall(void) {
@@ -186,6 +189,7 @@ int main(void) {
 	connection_t connection = {0}, *connections[1] = {&connection};
 	Players = players;
 	Conn = connections;
+	check_item_protection();
 	check_skill_potion();
 	check_skill_respec();
 	check_world_recall();

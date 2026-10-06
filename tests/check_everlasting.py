@@ -5,6 +5,7 @@ legacy death paths from touching save files. This does not test live map changes
 Also checks the Skill potion's allocation data and actual potion effect.
 Checks free respec, bonus-point persistence and legacy zero-word compatibility.
 Checks unlimited world recall range with the original exploration requirement.
+Checks staff recharge failures and magic ammunition damage protection.
 """
 from pathlib import Path
 import re
@@ -41,7 +42,8 @@ for obj in objects:
         path.unlink()
 subprocess.run(["make", "-f", "makefile.win", "-j4", "CFLAGS=" + " ".join(FLAGS),
                 "LUACFLAGS=" + " ".join(FLAGS), *objects], cwd=SRC, check=True)
-test_sources = [ROOT / "tests/everlasting.c", ROOT / "tests/skill_potion.c", ROOT / "tests/skill_respec.c"]
+test_sources = [ROOT / "tests" / name for name in
+                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c")]
 wrappers = re.findall(r"__wrap_(\w+)\(", "\n".join(path.read_text() for path in test_sources))
 output_root = ROOT / ".github/workspace"
 output_root.mkdir(parents=True, exist_ok=True)
@@ -57,10 +59,18 @@ with tempfile.TemporaryDirectory(prefix="everlasting-", dir=output_root) as temp
     dungeon_object = temp / "dungeon-test.o"
     subprocess.run(["gcc", *FLAGS, "-c", str(dungeon_source), "-o", str(dungeon_object)],
                    cwd=SRC, check=True)
+    spells_source = temp / "spells-test.c"
+    spells_source.write_text(f'#include "{(SRC / "server/spells1.c").as_posix()}"\n'
+                            'int test_inventory_fire(void) { return inven_damage(1, set_fire_destroy, 100); }\n'
+                            'void test_floor_damage(worldpos *wpos, int typ) { project_i(0, 0, 0, wpos, 0, 0, 500, typ); }\n')
+    spells_object = temp / "spells-test.o"
+    subprocess.run(["gcc", *FLAGS, "-c", str(spells_source), "-o", str(spells_object)],
+                   cwd=SRC, check=True)
     for instant_res in (True, False):
         case_flags = FLAGS.copy()
-        case_objects = [obj for obj in objects if obj not in ("server/main.o", "server/dungeon.o")]
-        case_objects.append(str(dungeon_object))
+        case_objects = [obj for obj in objects if obj not in
+                        ("server/main.o", "server/dungeon.o", "server/spells1.o")]
+        case_objects.extend([str(dungeon_object), str(spells_object)])
         if not instant_res:
             header = temp / "without-instant-res.h"
             header.write_text('#define SERVER\n#include "angband.h"\n#undef ENABLE_INSTANT_RES\n')

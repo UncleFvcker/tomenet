@@ -104,6 +104,9 @@ Compress-Archive -LiteralPath 'D:\Games\TomeNET-Server' -DestinationPath 'E:\Bac
 
 ## 5. 常见问题
 
+- Staff 充能失败不会炸毁或减少数量；仍可能清空电量。吸收了 Staff 的 Mage Staff 也不会因充能失败失去该能力。
+- Magic 弹药（魔法箭、弩矢和弹丸）不会被元素或爆炸伤害摧毁，包括背包、箭袋和地面上的物品。
+  同时免疫电击消耗和祛魔降属性；已有存档中的 Magic 弹药自动生效，只需更新服务端。
 - 大地图 Recall 不限距离：例如 `/recall 63 63`，地图的 X、Y 坐标范围均为 `0–63`。
   仍需先探索目的地；未探索的目的地按原规则回到最近一次访问的城镇。
   `/recall` 和召回道具共用这一规则，客户端无需更新。
