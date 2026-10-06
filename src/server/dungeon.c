@@ -31,10 +31,6 @@
 /* Inverse of (1 - assumed density of wood relative to water), we're assuming 0.5, so it's "1 / (1 - 0.5)" = 2. */
 #define WOOD_INV_DENSITY 2
 
-/* Maximum wilderness radius a player can travel with WoR [16]
- * TODO: Add another method to allow wilderness travels */
-#define RECALL_MAX_RANGE	24
-
 /* duration of GoI when getting recalled.        [2] (Must be 0<=n<=4) */
 #define RECALL_GOI_LENGTH	3
 
@@ -4448,8 +4444,7 @@ void recall_player(int Ind, char *message) {
 	if (p_ptr->wpos.wz) return;
 
 
-	/* Update wilderness map! This is for RECALL_MAX_RANGE:
-	   We learn about the intermediate world map sectors we land on. */
+	/* Remember the world map sector we land on. */
 	if (!p_ptr->ghost)
 		p_ptr->wild_map[(p_ptr->wpos.wx + p_ptr->wpos.wy * MAX_WILD_X) / 8] |=
 		    (1U << ((p_ptr->wpos.wx + p_ptr->wpos.wy * MAX_WILD_X) % 8));
@@ -4835,8 +4830,6 @@ static void do_recall(int Ind, bool bypass) {
 	/* world travel */
 	/* why wz again? (jir) */
 	else if ((!(p_ptr->recall_pos.wz) || !(wild_info[p_ptr->wpos.wy][p_ptr->wpos.wx].flags & (WILD_F_UP | WILD_F_DOWN))) && !bypass) {
-		int dis;
-
 		/* We haven't mapped the target worldmap sector yet? */
 		if (((!(p_ptr->wild_map[(wild_idx(&p_ptr->recall_pos)) / 8] &
 		    (1U << (wild_idx(&p_ptr->recall_pos)) % 8))) &&
@@ -4846,25 +4839,14 @@ static void do_recall(int Ind, bool bypass) {
 		    && p_ptr->recall_x == 0 //exception for admins: Allow precise recall within same sector
 		    ))
 		{
-			/* back to the last town (s)he visited.
-			 * (This can fail if gone too far) */
+			/* Back to the last town (s)he visited. */
 			p_ptr->recall_pos.wx = p_ptr->town_x;
 			p_ptr->recall_pos.wy = p_ptr->town_y;
 		}
 
-#ifdef RECALL_MAX_RANGE
-		dis = distance(p_ptr->recall_pos.wy, p_ptr->recall_pos.wx,
-				p_ptr->wpos.wy, p_ptr->wpos.wx);
-		if (dis > RECALL_MAX_RANGE && !is_admin(p_ptr)) {
-			new_pos.wx = p_ptr->wpos.wx + (p_ptr->recall_pos.wx - p_ptr->wpos.wx) * RECALL_MAX_RANGE / dis;
-			new_pos.wy = p_ptr->wpos.wy + (p_ptr->recall_pos.wy - p_ptr->wpos.wy) * RECALL_MAX_RANGE / dis;
-		}
-		else
-#endif	// RECALL_MAX_RANGE
-		{
-			new_pos.wx = p_ptr->recall_pos.wx;
-			new_pos.wy = p_ptr->recall_pos.wy;
-		}
+		/* Any explored world map sector is reachable in one recall. */
+		new_pos.wx = p_ptr->recall_pos.wx;
+		new_pos.wy = p_ptr->recall_pos.wy;
 
 		new_pos.wz = 0;
 

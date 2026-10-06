@@ -2883,9 +2883,8 @@ town you visited.
        not both at once. So if you want to go from Bree into the Orc Cave, you
        need two scrolls, first to go from Bree to the Orc Cave entrance located
        on the world surface, second to teleport down into the Orc Caves.
-    4) Note that Word of Recall has a maximum range when used to travel across
-       the world map. So if you want to recall from town A to town B you might
-       require more than one recall spell depending on the distance.
+    4) Word of Recall has no distance limit across the world map. Any sector
+       you have explored while alive can be reached in one recall.
     5) If you cast another Word of Recall while you're still waiting for one to
        kick in, the effect will be cancelled! That way you can change your mind
        if you suddenly spot a monster you want to go and kill after you already

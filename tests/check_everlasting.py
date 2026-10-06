@@ -4,6 +4,7 @@ Links the actual server objects; wrappers isolate map/network I/O and prevent
 legacy death paths from touching save files. This does not test live map changes.
 Also checks the Skill potion's allocation data and actual potion effect.
 Checks free respec, bonus-point persistence and legacy zero-word compatibility.
+Checks unlimited world recall range with the original exploration requirement.
 """
 from pathlib import Path
 import re
@@ -49,9 +50,17 @@ with tempfile.TemporaryDirectory(prefix="everlasting-", dir=output_root) as temp
     main_object = temp / "server-main.o"
     subprocess.run(["gcc", *FLAGS, "-Dmain=tomenet_server_main", "-c", "server/main.c",
                     "-o", str(main_object)], cwd=SRC, check=True)
+    # Expose the existing static recall handler in the test translation unit only.
+    dungeon_source = temp / "dungeon-test.c"
+    dungeon_source.write_text(f'#include "{(SRC / "server/dungeon.c").as_posix()}"\n'
+                              'void test_do_recall(int Ind) { do_recall(Ind, FALSE); }\n')
+    dungeon_object = temp / "dungeon-test.o"
+    subprocess.run(["gcc", *FLAGS, "-c", str(dungeon_source), "-o", str(dungeon_object)],
+                   cwd=SRC, check=True)
     for instant_res in (True, False):
         case_flags = FLAGS.copy()
-        case_objects = [obj for obj in objects if obj != "server/main.o"]
+        case_objects = [obj for obj in objects if obj not in ("server/main.o", "server/dungeon.o")]
+        case_objects.append(str(dungeon_object))
         if not instant_res:
             header = temp / "without-instant-res.h"
             header.write_text('#define SERVER\n#include "angband.h"\n#undef ENABLE_INSTANT_RES\n')

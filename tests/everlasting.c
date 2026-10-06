@@ -145,6 +145,41 @@ static void check_death(void) {
 
 void check_skill_potion(void);
 void check_skill_respec(void);
+void test_do_recall(int Ind);
+
+static void check_world_recall(void) {
+	real_recall = TRUE;
+	/* All four corners, including both longest diagonals, for a normal player. */
+	int corners[][2] = {{0, 0}, {MAX_WILD_X - 1, MAX_WILD_Y - 1},
+	                   {0, MAX_WILD_Y - 1}, {MAX_WILD_X - 1, 0}, {32, 32}};
+	for (unsigned i = 0; i < sizeof(corners) / sizeof(*corners); i++) {
+		setup();
+		player.mode = 0; player.death = FALSE;
+		player.wpos = (worldpos){MAX_WILD_X - 1 - corners[i][0], MAX_WILD_Y - 1 - corners[i][1], 0};
+		player.recall_pos = (worldpos){corners[i][0], corners[i][1], 0};
+		int target = wild_idx(&player.recall_pos);
+		player.wild_map[target / 8] |= 1U << (target % 8);
+		player.word_recall = 1;
+		assert(!is_admin(Players[1]));
+		test_do_recall(1);
+		assert(!player.word_recall && player.wpos.wz == 0);
+		assert(player.wpos.wx == corners[i][0] && player.wpos.wy == corners[i][1]);
+	}
+	/* Unknown destinations still go to the last visited town, now at any distance. */
+	setup(); player.mode = 0; player.death = FALSE;
+	player.wpos = (worldpos){0, 0, 0};
+	player.recall_pos = (worldpos){MAX_WILD_X - 1, MAX_WILD_Y - 1, 0};
+	player.town_x = MAX_WILD_X - 1; player.town_y = 0;
+	test_do_recall(1);
+	assert(player.wpos.wx == player.town_x && player.wpos.wy == player.town_y);
+	/* An unchanged destination remains the usual recall-to-town shortcut. */
+	setup(); player.mode = 0; player.death = FALSE;
+	player.wpos = player.recall_pos = (worldpos){0, 0, 0};
+	test_do_recall(1);
+	assert(player.wpos.wx == player.town_x && player.wpos.wy == player.town_y);
+	real_recall = FALSE;
+	puts("Unlimited world recall and exploration requirement checks passed.");
+}
 
 int main(void) {
 	player_type *players[2] = {NULL, &player};
@@ -153,6 +188,7 @@ int main(void) {
 	Conn = connections;
 	check_skill_potion();
 	check_skill_respec();
+	check_world_recall();
 	/* Preserve ordinary disconnect protection; Everlasting still revives fully. */
 	setup(); Conn[0]->last_keepalive_recv.tv_sec -= 3; check_death();
 	setup(); player.mode = 0; Conn[0]->last_keepalive_recv.tv_sec -= 3;
