@@ -7,8 +7,10 @@ static object_kind kinds[5];
 static object_type inventory[INVEN_TOTAL], floor_objects[2];
 static int random_result = -1, floor_deletions;
 static cptr inscriptions[] = {""};
+static bool native_cleanup;
 
 void test_random_result(int result) { random_result = result; }
+void test_inventory_cleanup(bool native) { native_cleanup = native; }
 
 s32b __real_Rand_div(s32b m);
 s32b __wrap_Rand_div(s32b m) {
@@ -16,7 +18,10 @@ s32b __wrap_Rand_div(s32b m) {
 }
 void __wrap_object_desc(int Ind, char *buf, object_type *o, int pref, int mode) { strcpy(buf, "test item"); }
 void __wrap_inven_item_describe(int Ind, int item) {}
-bool __wrap_inven_item_optimize(int Ind, int item) { return TRUE; }
+bool __real_inven_item_optimize(int Ind, int item);
+bool __wrap_inven_item_optimize(int Ind, int item) {
+	return native_cleanup ? __real_inven_item_optimize(Ind, item) : TRUE;
+}
 void __wrap_delete_object_idx(int idx, bool unfound_art, bool log) {
 	floor_deletions++;
 	memset(&o_list[idx], 0, sizeof(o_list[idx]));

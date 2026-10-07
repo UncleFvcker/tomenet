@@ -10,6 +10,7 @@ Checks family reproduction quotas, spell cooldowns and monster save compatibilit
 Checks level-zero item sharing and the remaining level/mode restrictions.
 Checks physical runes on all slots and artifacts, without artifact-generation PVAL caps.
 Checks book protection, boss rematches, free NPC stock refresh and Highlander elimination.
+Checks cursed equipment side effects, eligibility, re-equipping and item save/load.
 """
 from pathlib import Path
 import re
@@ -47,7 +48,7 @@ for obj in objects:
 subprocess.run(["make", "-f", "makefile.win", "-j4", "CFLAGS=" + " ".join(FLAGS),
                 "LUACFLAGS=" + " ".join(FLAGS), *objects], cwd=SRC, check=True)
 test_sources = [ROOT / "tests" / name for name in
-                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c", "item_sharing.c", "physical_runes.c", "monster_rules.c", "boss_store.c")]
+                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c", "item_sharing.c", "physical_runes.c", "monster_rules.c", "boss_store.c", "cursed_inversion.c")]
 wrappers = re.findall(r"__wrap_(\w+)\(", "\n".join(path.read_text() for path in test_sources))
 output_root = ROOT / ".github/workspace"
 output_root.mkdir(parents=True, exist_ok=True)
@@ -82,6 +83,11 @@ bool test_monster_moves(int m_idx) { int moves[8] = {0}; return get_moves(1, m_i
 ''',
         "monster2": "",
         "save": '''
+void test_write_cursed_item(FILE *file, object_type *item) {
+    static byte buffer[MAX_BUF_SIZE];
+    fff = file; fff_buf = buffer; fff_buf_pos = 0; xor_byte = 0; v_stamp = x_stamp = 0;
+    wr_item(item); wr_u32b(0x12345678); write_buffer(); fff = NULL; fff_buf = NULL;
+}
 void test_write_monsters(FILE *file, monster_type *monsters, int count, bool legacy) {
     static byte buffer[MAX_BUF_SIZE];
     fff = file; fff_buf = buffer; fff_buf_pos = 0; xor_byte = 0; v_stamp = x_stamp = 0;
@@ -97,6 +103,13 @@ void test_write_monsters(FILE *file, monster_type *monsters, int count, bool leg
 }
 ''',
         "load2": '''
+bool test_read_cursed_item(FILE *file, object_type *item) {
+    static byte buffer[MAX_BUF_SIZE]; u32b marker;
+    fff = file; fff_buf = buffer; fff_buf_pos = MAX_BUF_SIZE; xor_byte = 0; v_check = x_check = 0;
+    sf_major = 4; sf_minor = 9; sf_patch = 26;
+    rd_item(item); rd_u32b(&marker); fff = NULL; fff_buf = NULL;
+    return marker == 0x12345678;
+}
 bool test_read_monsters(FILE *file, monster_type *monsters, int capacity, bool legacy) {
     static byte buffer[MAX_BUF_SIZE]; u16b count; u32b marker;
     fff = file; fff_buf = buffer; fff_buf_pos = MAX_BUF_SIZE; xor_byte = 0; v_check = x_check = 0;

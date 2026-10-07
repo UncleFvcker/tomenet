@@ -104,6 +104,11 @@ Compress-Archive -LiteralPath 'D:\Games\TomeNET-Server' -DestinationPath 'E:\Bac
 
 ## 5. 常见问题
 
+- Hell Knight、吸血鬼及 Blood Sacrifice 形态的 Corrupted Priest，成功反转重诅咒装备后，
+  该装备的 Aggr、生命／法力／经验流失、随机传送、禁止传送／施法、古老／魔苟斯诅咒、黑息及复制怪物效果失效。
+  自动重新诅咒和额外禁止丢弃标记也仅在反转期间失效；诅咒本身、原有卸装限制及数值反转规则保留。
+  卸下或解咒后恢复原属性，原带自动诅咒的装备再穿上仍可反转；失败的随机神器反转不享受保护。
+  已有已反转装备自动生效，无需迁移存档或更新客户端。
 - 书籍、法术卷轴／水晶、自制 Codex、Spellbook 和 Grimoire 不会因元素攻击损坏；旧存档物品自动生效。
 - `/resetboss` 免费重置当前角色对当前地牢 Boss 的击杀记录，只能在 Boss 层使用。
   Boss 已死亡时立即重生；仍存活时不复制、不回血。其他角色记录和称号不变；生成失败会恢复原记录。

@@ -1852,6 +1852,17 @@ void object_flags(object_type *o_ptr, u32b *f1, u32b *f2, u32b *f3, u32b *f4, u3
 		(*f5) |= TR5_IGNORE_MANA;
 		(*f5) |= TR5_IGNORE_DISEN;
 	}
+
+#ifdef VAMPIRES_INV_CURSED
+	/* Suppress side effects only while successfully flipped. Keep the curse itself
+	   so taking off/uncursing can restore the item and equipping can flip it again. */
+	if (o_ptr->pval2 > 0 && wearable_p(o_ptr)) {
+		(*f3) &= ~(TR3_AUTO_CURSE | TR3_NO_TELE | TR3_NO_MAGIC | TR3_TY_CURSE |
+		    TR3_DRAIN_EXP | TR3_TELEPORT | TR3_AGGRAVATE);
+		(*f4) &= ~(TR4_BLACK_BREATH | TR4_DG_CURSE | TR4_CLONE | TR4_CURSE_NO_DROP);
+		(*f5) &= ~(TR5_DRAIN_MANA | TR5_DRAIN_HP);
+	}
+#endif
 }
 
 

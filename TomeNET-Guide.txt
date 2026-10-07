@@ -16234,6 +16234,14 @@ and also not a Nazgul's ring of power, then if a vampire or Hell Knight (true
 one, not mimicked) or a Corrupted Priest in Blood Sacrifice form equips it, its
 negative boni will flip to positive numbers.
 
+While successfully flipped, equipment does not aggravate monsters, drain HP,
+mana or experience, teleport you randomly, prevent teleportation or spellcasting,
+inflict ancient/morgothian curses or Black Breath, or clone monsters. Its
+auto-cursing and extra no-drop flags are also inactive. The curse itself and
+normal removal restrictions remain. Taking it off or uncursing it ends the
+flipped state and restores those flags; auto-cursing items can flip again on
+re-equipping. Failed randart flips do not receive this protection.
+
 Also vampires tend to greatly resist certain bad effects that heavily cursed
 items may exert, making for example Morgul weapons and some heavily cursed
 true artifacts quite useful.
