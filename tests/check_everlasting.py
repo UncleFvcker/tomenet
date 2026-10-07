@@ -9,6 +9,7 @@ Checks staff recharge failures and magic ammunition damage protection.
 Checks family reproduction quotas, spell cooldowns and monster save compatibility.
 Checks level-zero item sharing and the remaining level/mode restrictions.
 Checks physical runes on all slots and artifacts, without artifact-generation PVAL caps.
+Checks book protection, boss rematches, free NPC stock refresh and Highlander elimination.
 """
 from pathlib import Path
 import re
@@ -46,7 +47,7 @@ for obj in objects:
 subprocess.run(["make", "-f", "makefile.win", "-j4", "CFLAGS=" + " ".join(FLAGS),
                 "LUACFLAGS=" + " ".join(FLAGS), *objects], cwd=SRC, check=True)
 test_sources = [ROOT / "tests" / name for name in
-                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c", "item_sharing.c", "physical_runes.c", "monster_rules.c")]
+                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c", "item_sharing.c", "physical_runes.c", "monster_rules.c", "boss_store.c")]
 wrappers = re.findall(r"__wrap_(\w+)\(", "\n".join(path.read_text() for path in test_sources))
 output_root = ROOT / ".github/workspace"
 output_root.mkdir(parents=True, exist_ok=True)
@@ -72,6 +73,7 @@ with tempfile.TemporaryDirectory(prefix="everlasting-", dir=output_root) as temp
     # Test private AI and record serialization without adding production entry points.
     extra_objects = []
     for name, shim in {
+        "store": "",
         "melee2": '''
 void test_cooldown_start(monster_type *m, int chance) { monster_spell_cooldown_start(m, chance); }
 void test_cooldown_charge(monster_type *m, int energy) { monster_spell_cooldown_charge(m, energy); }
@@ -109,6 +111,10 @@ bool test_read_monsters(FILE *file, monster_type *monsters, int capacity, bool l
     }.items():
         source = temp / (name + "-test.c")
         body = (SRC / "server" / (name + ".c")).read_text()
+        if name == "store":
+            body = body.replace('#include "angband.h"', '#include "angband.h"\nvoid display_store(int Ind);')
+            body = body.replace("static void display_store(", "static void test_native_display_store(")
+            body = body.replace("void store_maint(", "void test_native_store_maint(")
         if name == "melee2":
             body = body.replace('#include "angband.h"', '#include "angband.h"\nint get_moves_astar(int Ind, int m_idx, int *yp, int *xp);')
             body = body.replace("static int get_moves_astar(", "int test_native_get_moves_astar(")
@@ -125,7 +131,7 @@ bool test_read_monsters(FILE *file, monster_type *monsters, int capacity, bool l
         case_flags = FLAGS.copy()
         case_objects = [obj for obj in objects if obj not in
                         ("server/main.o", "server/dungeon.o", "server/spells1.o",
-                         "server/melee2.o", "server/monster2.o", "server/save.o", "server/load2.o")]
+                         "server/melee2.o", "server/monster2.o", "server/save.o", "server/load2.o", "server/store.o")]
         case_objects.extend([str(dungeon_object), str(spells_object), *extra_objects])
         if not instant_res:
             header = temp / "without-instant-res.h"

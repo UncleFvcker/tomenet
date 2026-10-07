@@ -5863,9 +5863,42 @@ void store_maint(store_type *st_ptr) {
 }
 
 
-/*
- * Initialize the stores
- */
+/* Free, explicit restock of the current NPC shop only. */
+bool refresh_store(int Ind) {
+	player_type *p_ptr = Players[Ind];
+	int store = p_ptr->store_num, t = gettown(Ind);
+	if (store < 0 || store >= max_st_idx || store == STORE_HOME || store == STORE_HOME_DUN) {
+		msg_print(Ind, "You must be inside an NPC shop to refresh its stock.");
+		return FALSE;
+	}
+	if (t == -1) t = gettown_dun(Ind);
+	if (t < 0 || t >= numtowns) return FALSE;
+	store_type *st_ptr = &town[t].townstore[store];
+	if (st_ptr->stock_size <= 0 || (st_info[st_ptr->st_idx].flags1 & SF1_SPECIAL) ||
+	    (st_info[st_ptr->st_idx].flags2 & SF2_MUSEUM) || !store_attest_command(store, BACT_BUY)) {
+		msg_print(Ind, "This building has no refreshable NPC stock.");
+		return FALSE;
+	}
+	for (int i = st_ptr->stock_num - 1; i >= 0; i--) {
+		object_type *o_ptr = &st_ptr->stock[i];
+		if (true_artifact_p(o_ptr)) handle_art_d(o_ptr->name1);
+		questitem_d(o_ptr, o_ptr->number);
+		store_item_increase(st_ptr, i, -o_ptr->number);
+		store_item_optimize(st_ptr, i);
+	}
+	for (int i = 0; i < MAX_MAINTENANCES; i++) store_maint(st_ptr);
+	st_ptr->last_visit = turn;
+	for (int i = 1; i <= NumPlayers; i++) {
+		if (Players[i]->store_num != store) continue;
+		int visitor_town = gettown(i);
+		if (visitor_town == -1) visitor_town = gettown_dun(i);
+		if (visitor_town == t) display_store(i);
+	}
+	msg_print(Ind, "The shop has refreshed its stock free of charge.");
+	return TRUE;
+}
+
+/* Initialize the stores. */
 void store_init(store_type *st_ptr) {
 	int k;
 	//owner_type *ot_ptr;

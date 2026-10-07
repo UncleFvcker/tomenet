@@ -9689,8 +9689,32 @@ static void display_diz_death(int Ind) {
 #define WHO_LET_THE_DOGS_OUT 100
 
 /* Shared recovery for ordinary and safe Everlasting deaths. */
-static void recover_everlasting(int Ind) {
+static void recover_everlasting(int Ind, bool safe_event) {
 	player_type *p_ptr = Players[Ind];
+	bool eliminated = FALSE;
+	if (!safe_event && in_sector00(&p_ptr->wpos))
+		for (int i = 0; i < MAX_GLOBAL_EVENTS; i++) {
+			global_event_type *ge = &global_event[i];
+			if (ge->getype != GE_HIGHLANDER || p_ptr->global_event_type[i] != GE_HIGHLANDER) continue;
+			for (int k = 0; k < MAX_GE_PARTICIPANTS; k++)
+				if (ge->participant[k] == p_ptr->id) ge->participant[k] = 0;
+			p_ptr->buffer_get[i] = GE_HIGHLANDER;
+			buffer_account_for_event_deed(p_ptr, DEATH_NORMAL);
+			p_ptr->buffer_get[i] = GE_NONE;
+			p_ptr->global_event_type[i] = GE_NONE;
+			eliminated = TRUE;
+		}
+	if (eliminated) {
+		p_ptr->global_event_temp &= ~(PEVF_NOGHOST_00 | PEVF_SAFEDUN_00 | PEVF_AUTOPVP_00 | PEVF_SEPDUN_00);
+		/* Tournament-only amulets must not survive an exit from the tournament. */
+		for (int i = INVEN_TOTAL - 1; i >= 0; i--)
+			if (p_ptr->inventory[i].tval == TV_AMULET &&
+			    (p_ptr->inventory[i].sval == SV_AMULET_HIGHLANDS || p_ptr->inventory[i].sval == SV_AMULET_HIGHLANDS2)) {
+				inven_item_increase(Ind, i, -p_ptr->inventory[i].number);
+				inven_item_optimize(Ind, i);
+			}
+		msg_print(Ind, "You have been eliminated from Highlander. Your character is revived safely.");
+	}
 
 	if (p_ptr->image) (void)set_image(Ind, 0);
 	if (p_ptr->blind) (void)set_blind(Ind, 0);
@@ -9724,7 +9748,14 @@ static void recover_everlasting(int Ind) {
 	p_ptr->recall_pos.wy = p_ptr->town_y;
 	p_ptr->recall_pos.wz = 0;
 	p_ptr->new_level_method = LEVEL_TO_TEMPLE;
-	recall_player(Ind, "\377GYou are revived in town without losing anything.");
+	if (safe_event) {
+		p_ptr->recall_pos = (worldpos){WPOS_SECTOR000_X, WPOS_SECTOR000_Y, 0};
+		p_ptr->new_level_method = LEVEL_OUTSIDE_RAND;
+	} else if (eliminated) {
+		p_ptr->recall_pos = BREE_WPOS;
+		p_ptr->new_level_method = LEVEL_OUTSIDE_RAND;
+	}
+	recall_player(Ind, "\377GYou are revived without death penalties.");
 }
 
 void player_death(int Ind) {
@@ -10199,7 +10230,7 @@ void player_death(int Ind) {
 		}
 
 		/* Wow! You may return!! */
-		if (everlasting) recover_everlasting(Ind);
+		if (everlasting) recover_everlasting(Ind, FALSE);
 		if (!ge_secure) p_ptr->soft_deaths++; /* Note: no diz_death here actually */
 #ifdef TEST_SERVER /* ..only on test server for testing actually */
 #ifdef RACE_DIZ
@@ -10251,7 +10282,7 @@ void player_death(int Ind) {
 		s_printf("%s - %s%s (%d%s) was pseudo-killed by %s for %d damage at %d, %d, %d.\n", time_str, logtitlebuf, p_ptr->name, p_ptr->lev, p_ptr->admin_dm ? " DM" : (p_ptr->admin_wiz ? " DW" : ""), p_ptr->really_died_from, p_ptr->deathblow, p_ptr->wpos.wx, p_ptr->wpos.wy, p_ptr->wpos.wz);
 		if (everlasting) {
 			if (!sector000downstairs) p_ptr->global_event_temp &= ~PEVF_SAFEDUN_00;
-			recover_everlasting(Ind);
+			recover_everlasting(Ind, TRUE);
 			p_ptr->soft_deaths++;
 			return;
 		}
@@ -10359,7 +10390,7 @@ void player_death(int Ind) {
 		display_diz_death(Ind);
 #endif
 
-		recover_everlasting(Ind);
+		recover_everlasting(Ind, FALSE);
 		p_ptr->deaths++;
 		return;
 	}

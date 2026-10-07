@@ -28,8 +28,65 @@
 
 static void do_slash_brief_help(int Ind);
 char pet_creation(int Ind);
+bool refresh_store(int Ind);
 //static int lInd = 0;
 
+/* Explicit rematches leave other characters' unique credit and winner status intact. */
+static bool reset_dungeon_boss(int Ind) {
+	player_type *p_ptr = Players[Ind];
+	worldpos *wpos = &p_ptr->wpos;
+	dungeon_type *d_ptr = getdungeon(wpos);
+	int depth = ABS(wpos->wz), boss = 0;
+	if (!wpos->wz || !d_ptr || !getcave(wpos) || !getfloor(wpos)) {
+		msg_print(Ind, "You must be on a dungeon boss floor.");
+		return FALSE;
+	}
+	int type = d_ptr->type, bottom = d_ptr->maxdepth;
+#ifdef IRONDEEPDIVE_MIXED_TYPES
+	if (in_irondeepdive(wpos)) {
+		type = iddc[depth].type;
+		bottom = d_info[type].maxdepth;
+	}
+#endif
+	if (depth == bottom) boss = d_info[type].final_guardian;
+	/* Morgoth is a special depth-100 encounter, not a FINAL_GUARDIAN. */
+	if ((type == DUNGEON_ANGBAND || in_irondeepdive(wpos)) && depth == r_info[RI_MORGOTH].level)
+		boss = RI_MORGOTH;
+	if (!boss) {
+		msg_print(Ind, "This is not a dungeon boss floor.");
+		return FALSE;
+	}
+	for (int i = 1; i < m_max; i++) {
+		if (m_list[i].r_idx != boss) continue;
+		if (inarea(wpos, &m_list[i].wpos)) {
+			p_ptr->r_killed[boss] = 0;
+			msg_print(Ind, "Your boss kill record was reset. The existing boss remains unchanged.");
+			return TRUE;
+		}
+		if ((r_info[boss].flags1 & RF1_UNIQUE) && !in_irondeepdive(wpos)) {
+			msg_print(Ind, "That unique boss is still alive on another floor.");
+			return FALSE;
+		}
+	}
+	if (boss == RI_MORGOTH && p_ptr->r_killed[RI_SAURON] != 1 && !is_admin(p_ptr)) {
+		msg_print(Ind, "You must defeat Sauron before challenging Morgoth.");
+		return FALSE;
+	}
+	s16b old_credit = p_ptr->r_killed[boss];
+	u32b old_override = summon_override_checks;
+	p_ptr->r_killed[boss] = 0;
+	/* Permit this validated boss's live rematch; terrain and unique consistency remain checked. */
+	summon_override_checks = SO_BOSS_MONSTERS | SO_FORCE_DEPTH;
+	int result = alloc_monster_specific(wpos, boss, 20, FALSE);
+	summon_override_checks = old_override;
+	if (result) {
+		p_ptr->r_killed[boss] = old_credit;
+		msg_print(Ind, "The boss could not be placed. Your kill record was not changed.");
+		return FALSE;
+	}
+	msg_print(Ind, "Your boss kill record was reset and the boss has respawned.");
+	return TRUE;
+}
 
 #ifdef NOTYET	/* new idea */
 
@@ -1483,6 +1540,10 @@ void do_slash_cmd(int Ind, char *message, char *message_u) {
 			return;
 		}
 		/* Please add here anything you think is needed.  */
+		else if (streq(messagelc, "/refreshstore")) {
+			refresh_store(Ind);
+			return;
+		}
 		else if ((prefix(messagelc, "/refresh")) || prefix(messagelc, "/ref")) {
 			do_cmd_refresh(Ind);
 			return;
@@ -4067,6 +4128,10 @@ void do_slash_cmd(int Ind, char *message, char *message_u) {
 
 		else if (streq(messagelc, "/respec")) {
 			respec_skills(Ind, TRUE);
+			return;
+		}
+		else if (streq(messagelc, "/resetboss")) {
+			reset_dungeon_boss(Ind);
 			return;
 		}
 
@@ -15397,7 +15462,7 @@ static void do_slash_brief_help(int Ind) {
 		msg_print(Ind, "  /dis \377rdestroys \377wall the uninscribed items in your inventory!");
 #else
 #endif
-	msg_print(Ind, "Common commands: \377yex fe rec fill cough afk page note undoskills respec t ut dis bug rfe\377w."); //xo,que,ic,ig,shout,seen,time,tym,tip,s,me
+	msg_print(Ind, "Common commands: \377yex fe rec fill cough afk page note undoskills respec resetboss refreshstore t ut dis bug rfe\377w."); //xo,que,ic,ig,shout,seen,time,tym,tip,s,me
 	msg_print(Ind, " Press '\377y?\377w' key to see a list of command keys. Press \377y~g\377w for the TomeNET Guide.");
 }
 

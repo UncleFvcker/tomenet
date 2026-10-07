@@ -2,7 +2,7 @@
 #define SERVER
 #include "angband.h"
 #include <assert.h>
-#include <setjmp.h>
+#include <stdint.h>
 #include <sys/time.h>
 
 static player_type player;
@@ -14,9 +14,11 @@ static bool real_recall;
 static bool disconnect_recall;
 static cave_type cave_cell, *cave_rows[] = {&cave_cell};
 static cave_type **monster_test_cave;
-static jmp_buf legacy_jump;
+/* The MinGW test escapes before deletion, without Windows CRT stack unwinding. */
+static intptr_t legacy_jump[5];
 
 void test_floor_item(int idx) { real_recall = idx > 0; cave_cell.o_idx = idx; }
+void test_dungeon_config(int type, int bottom) { test_dungeon.type = type; test_dungeon.maxdepth = bottom; }
 void test_monster_cave(cave_type **cave) { monster_test_cave = cave; }
 
 dungeon_type *__wrap_getdungeon(worldpos *wpos) { return &test_dungeon; }
@@ -28,7 +30,7 @@ int __wrap_get_esp_link(int Ind, u32b flags, player_type **p) { return 0; }
 s16b __real_get_skill(player_type *p, int skill);
 s16b __wrap_get_skill(player_type *p, int skill) { return __real_get_skill(p, skill); }
 int __wrap_s_printf(const char *fmt, ...) {
-	if (legacy_path && !strncmp(fmt, "CHARACTER_TERMINATION:", 22)) longjmp(legacy_jump, 1);
+	if (legacy_path && !strncmp(fmt, "CHARACTER_TERMINATION:", 22)) __builtin_longjmp(legacy_jump, 1);
 	return 0;
 }
 int __wrap_l_printf(char *fmt, ...) { return 0; }
@@ -66,8 +68,9 @@ void __wrap_recall_player(int Ind, char *message) {
 		recalls++;
 		return;
 	}
-	assert(player.new_level_method == LEVEL_TO_TEMPLE);
-	assert(player.recall_pos.wx == player.town_x && player.recall_pos.wy == player.town_y);
+	assert(player.new_level_method == LEVEL_TO_TEMPLE || player.new_level_method == LEVEL_OUTSIDE_RAND);
+	if (player.new_level_method == LEVEL_TO_TEMPLE)
+		assert(player.recall_pos.wx == player.town_x && player.recall_pos.wy == player.town_y);
 	assert(player.recall_pos.wz == 0);
 	if (real_recall) __real_recall_player(Ind, message);
 	else player.wpos = player.recall_pos;
@@ -154,6 +157,7 @@ void check_item_protection(void);
 void check_item_sharing(void);
 void check_physical_runes(void);
 void check_monster_rules(void);
+void check_boss_store(void);
 void test_do_recall(int Ind);
 
 static void check_world_recall(void) {
@@ -190,7 +194,49 @@ static void check_world_recall(void) {
 	puts("Unlimited world recall and exploration requirement checks passed.");
 }
 
+static void check_highlander(void) {
+	static player_type opponent;
+	player_type *players[3] = {NULL, &player, &opponent}, **old = Players;
+	global_event_type *ge = &global_event[0];
+	for (int depth = 0; depth >= -1; depth--) {
+	setup(); player.id = 123; player.account = 456;
+	player.global_event_type[0] = GE_HIGHLANDER;
+	player.global_event_progress[0][0] = 5;
+	player.wpos = (worldpos){0, 0, depth}; player.town_x = player.town_y = 0; sector000separation = TRUE;
+	player.global_event_temp = PEVF_NOGHOST_00 | PEVF_AUTOPVP_00 | PEVF_SEPDUN_00;
+	BREE_WPOS = (worldpos){32, 32, 0};
+	memset(ge, 0, sizeof(*ge)); ge->getype = GE_HIGHLANDER;
+	ge->announcement_time = -1; ge->state[0] = 5; ge->state[3] = 1;
+	ge->participant[0] = player.id; ge->participant[1] = 789;
+	memset(&opponent, 0, sizeof(opponent)); opponent.id = 789; opponent.wpos = (worldpos){0, 0, 0};
+	opponent.global_event_type[0] = GE_HIGHLANDER;
+	Players = players; NumPlayers = 2; cfg.fps = 60;
+	memset(ge_contender_buffer_ID, 0, sizeof(ge_contender_buffer_ID));
+	check_death();
+	assert(!ge->participant[0] && ge->participant[1] == 789);
+	assert(!player.global_event_type[0] && !player.global_event_temp);
+	assert(player.wpos.wx == 32 && player.wpos.wy == 32);
+	assert(ge_contender_buffer_ID[0] == 456 && ge_contender_buffer_deed[0] == SV_DEED2_HIGHLANDER);
+	process_global_events();
+	assert(ge->state[0] == 6 && ge->extra[3] == 2);
+	player.death = TRUE; player_death(1);
+	assert(!ge_contender_buffer_ID[1]); /* Later deaths cannot repeat the participation reward. */
+	memset(ge, 0, sizeof(*ge)); Players = old;
+	}
+	/* Preparatory safe deaths stay in the arena and are not eliminations. */
+	setup(); player.id = 123; player.global_event_type[0] = GE_HIGHLANDER;
+	player.wpos = (worldpos){0, 0, -1}; sector000separation = TRUE;
+	player.global_event_temp = PEVF_SAFEDUN_00 | PEVF_NOGHOST_00;
+	ge->getype = GE_HIGHLANDER; ge->state[0] = 1; ge->participant[0] = 123;
+	check_death();
+	assert(player.wpos.wx == 0 && player.wpos.wy == 0 && player.wpos.wz == 0);
+	assert(ge->participant[0] == 123 && player.global_event_type[0] == GE_HIGHLANDER);
+	memset(ge, 0, sizeof(*ge)); sector000separation = FALSE;
+	puts("Highlander elimination, participation reward and last-survivor detection checks passed.");
+}
+
 int main(void) {
+	setvbuf(stdout, NULL, _IONBF, 0);
 	player_type *players[2] = {NULL, &player};
 	connection_t connection = {0}, *connections[1] = {&connection};
 	Players = players;
@@ -201,7 +247,9 @@ int main(void) {
 	check_skill_potion();
 	check_skill_respec();
 	check_world_recall();
+	check_boss_store();
 	check_monster_rules();
+	check_highlander();
 	/* Preserve ordinary disconnect protection; Everlasting still revives fully. */
 	setup(); Conn[0]->last_keepalive_recv.tv_sec -= 3; check_death();
 	setup(); player.mode = 0; Conn[0]->last_keepalive_recv.tv_sec -= 3;
@@ -281,7 +329,7 @@ int main(void) {
 		player.mode = suicide ? MODE_EVERLASTING : 0;
 		player.suicided = suicide; legacy_path = 1;
 		if (suicide) Conn[0]->last_keepalive_recv.tv_sec -= 3;
-		if (!setjmp(legacy_jump)) { player_death(1); assert(!"legacy death path was bypassed"); }
+		if (!__builtin_setjmp(legacy_jump)) { player_death(1); assert(!"legacy death path was bypassed"); }
 		assert(recalls == 0);
 	}
 	puts("Everlasting death and resurrection checks passed.");

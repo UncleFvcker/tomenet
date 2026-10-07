@@ -104,6 +104,14 @@ Compress-Archive -LiteralPath 'D:\Games\TomeNET-Server' -DestinationPath 'E:\Bac
 
 ## 5. 常见问题
 
+- 书籍、法术卷轴／水晶、自制 Codex、Spellbook 和 Grimoire 不会因元素攻击损坏；旧存档物品自动生效。
+- `/resetboss` 免费重置当前角色对当前地牢 Boss 的击杀记录，只能在 Boss 层使用。
+  Boss 已死亡时立即重生；仍存活时不复制、不回血。其他角色记录和称号不变；生成失败会恢复原记录。
+  支持普通地牢底层、IDDC 对应主题 Boss 层，以及 Angband／IDDC 的魔苟斯 100 层；魔苟斯仍要求先击败索伦。
+- NPC 商店按大写 `R` 免费重新生成当前店库存；同店玩家同步看到变化，也可输入 `/refreshstore`。
+  住宅、共享仓库、玩家商店、博物馆和服务建筑不能刷新。按键需要配套新版客户端。
+- Highlander：Everlasting 在决斗阶段死亡会正常淘汰、免费复活并返回 Bree，活动可继续判胜。
+  准备阶段的安全死亡仍返回活动区域表面并保留参赛资格；淘汰时只移除活动专用项链，普通装备和财产保留。
 - Runemaster 的 Physical runes 可用于全部已装备槽位，包括戒指、项链、弓、灯、工具、弹药和神器。
   符印不受神器生成的 PVAL 数值上限和属性组合限制；例如 PVAL +10 的装备可获得 +10 speed。
   数值仍沿用装备原 PVAL，具体效果按原有随机候选池选取，并非每次必出速度。

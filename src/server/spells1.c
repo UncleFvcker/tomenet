@@ -3690,7 +3690,7 @@ int inven_damage(int Ind, inven_func typ, int perc) {
 		o_ptr = &p_ptr->inventory[i];
 
 		/* Hack -- for now, skip artifacts */
-		if (artifact_p(o_ptr) || (is_ammo(o_ptr->tval) && o_ptr->sval == SV_AMMO_MAGIC)) continue;
+		if (artifact_p(o_ptr) || o_ptr->tval == TV_BOOK || (is_ammo(o_ptr->tval) && o_ptr->sval == SV_AMMO_MAGIC)) continue;
 
 		/* Give this item slot a shot at death */
 		if ((*typ)(o_ptr)) {
@@ -6571,7 +6571,7 @@ static bool project_i(int Ind, int who, int r, struct worldpos *wpos, int y, int
 			if (!quiet && p_ptr->obj_vis[this_o_idx]) obvious = TRUE;
 
 			/* Artifacts, and other objects, get to resist */
-			if (is_art || ignore || (is_ammo(o_ptr->tval) && o_ptr->sval == SV_AMMO_MAGIC)) {
+			if (is_art || ignore || o_ptr->tval == TV_BOOK || (is_ammo(o_ptr->tval) && o_ptr->sval == SV_AMMO_MAGIC)) {
 				/* Observe the resist */
 				//if (!quiet && p_ptr->obj_vis[c_ptr->o_idx])
 				if (!quiet && p_ptr->obj_vis[this_o_idx])

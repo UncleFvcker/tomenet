@@ -1837,8 +1837,8 @@ void object_flags(object_type *o_ptr, u32b *f1, u32b *f2, u32b *f3, u32b *f4, u3
 		(*f5) |= TR5_IGNORE_WATER;
 	}
 
-	/* Inherent protection also applies to magic ammunition in existing saves. */
-	if (is_ammo(o_ptr->tval) && o_ptr->sval == SV_AMMO_MAGIC) {
+	/* Inherent protection also applies to existing books, spell scrolls and custom tomes. */
+	if (o_ptr->tval == TV_BOOK || (is_ammo(o_ptr->tval) && o_ptr->sval == SV_AMMO_MAGIC)) {
 		(*f3) |= TR3_IGNORE_ACID | TR3_IGNORE_ELEC | TR3_IGNORE_FIRE | TR3_IGNORE_COLD;
 		(*f5) |= TR5_IGNORE_WATER | TR5_IGNORE_MANA | TR5_IGNORE_DISEN;
 	}

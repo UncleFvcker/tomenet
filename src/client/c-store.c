@@ -1087,6 +1087,11 @@ static void store_process_command(int cmd) {
 	/* BIG_MAP leads to big shops */
 	int entries = (screen_hgt == MAX_SCREEN_HGT) ? 26 : 12;
 	store_rebuild_filter_view();
+	if (cmd == 'R') {
+		store_top = 0;
+		Send_msg("/refreshstore");
+		return;
+	}
 
 	for (i = 0; i < MAX_STORE_ACTIONS; i++) {
 		if (!c_store.actions[i]) continue;
@@ -1386,6 +1391,12 @@ void c_store_prt_gold(void) {
 		/* Erase part of the screen */
 		Term_erase(x, y + 17 + spacer, 255);
 	}
+	if (store_num >= 0 && store_num != STORE_HOME && store_num != STORE_HOME_DUN && store.stock_num >= 0)
+		for (int i = 0; i < MAX_STORE_ACTIONS; i++)
+			if (c_store.actions[i] && c_store.letter[i] == 'p') {
+				put_str("R: Refresh stock (free)", y + 17 + spacer, x);
+				break;
+			}
 
 #ifdef AU_DURING_BROWSE
 	if (special_line_type) Term_switch(1);

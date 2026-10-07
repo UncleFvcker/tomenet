@@ -92,6 +92,24 @@ void check_item_protection(void) {
 			assert(floor_objects[1].to_h == 5 && floor_objects[1].to_d == 5);
 		}
 	}
+	/* All book variants, including single-spell scrolls and personalized codices. */
+	int books[] = {0, SV_TOME_CHAOS, SV_BOOK_COMBO, SV_SPELLBOOK,
+	               SV_CUSTOM_TOME_1, SV_CUSTOM_TOME_2, SV_CUSTOM_TOME_3};
+	for (unsigned b = 0; b < sizeof(books) / sizeof(*books); b++) {
+		memset(inventory, 0, sizeof(inventory));
+		kinds[4].tval = TV_BOOK; kinds[4].sval = books[b];
+		invcopy(&inventory[0], 4); inventory[0].number = 10;
+		inventory[0].xtra1 = 12; inventory[0].xtra2 = 34;
+		inventory[INVEN_WIELD] = inventory[0];
+		assert(!test_inventory_fire() && !inven_damage(1, set_all_destroy, 100));
+		assert(inventory[0].number == 10 && inventory[INVEN_WIELD].number == 10);
+		for (unsigned i = 0; i < sizeof(damage) / sizeof(*damage); i++) {
+			floor_objects[1] = inventory[0]; floor_objects[1].wpos = p->wpos;
+			test_floor_item(1); test_floor_damage(&p->wpos, damage[i]);
+			assert(!floor_deletions && floor_objects[1].number == 10);
+			assert(floor_objects[1].xtra1 == 12 && floor_objects[1].xtra2 == 34);
+		}
+	}
 	/* Ordinary arrows still burn, so protection is specific to magic ammunition. */
 	memset(inventory, 0, sizeof(inventory));
 	kinds[4].tval = TV_ARROW; kinds[4].sval = 0;
