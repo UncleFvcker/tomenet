@@ -6692,6 +6692,17 @@ int Receive_idle(void) {
 	return(1);
 }
 
+/* Keep display-only rarity labels and colors out of automatic item matching. */
+static char *artifact_match_name(char *name, char *buf) {
+	char *reset;
+	if (!prefix(name, "[TA] ") && !prefix(name, "[RA] ")) return(name);
+	strcpy(buf, name + 5);
+	if (buf[0] == '\377' && (buf[1] == ':' || buf[1] == ';'))
+		memmove(buf, buf + 2, strlen(buf + 2) + 1);
+	if ((reset = strstr(buf, "\377. {"))) memmove(reset, reset + 2, strlen(reset + 2) + 1);
+	return(buf);
+}
+
 /* Apply auto_pickup and auto_destroy */
 void apply_auto_pickup(char *item_name) {
 	int i;
@@ -6706,6 +6717,8 @@ void apply_auto_pickup(char *item_name) {
 #endif
 	bool unowned;
 	char *c;
+	char match_name[ONAME_LEN];
+	item_name = artifact_match_name(item_name, match_name);
 
 	c = strchr(item_name, '{');
 	unowned = (c && ((c[1] >= '0' && c[1] <= '9') || c[1] == '?'));
@@ -6843,7 +6856,7 @@ bool apply_auto_inscriptions_aux(int slot, int insc_idx, bool force) {
 	regmatch_t pmatch[REGEX_ARRAY_SIZE + 1];
 #endif
 	int start, stop;
-	char *iname;
+	char *iname, *match_name, match_buf[ONAME_LEN];
 	int iinsc, iilen;
 #ifdef ENABLE_SUBINVEN
 	int sslot = -1;
@@ -6873,6 +6886,7 @@ bool apply_auto_inscriptions_aux(int slot, int insc_idx, bool force) {
 		iilen = inventory_inscription_len[slot];
 	}
 
+	match_name = artifact_match_name(iname, match_buf);
 	start = (insc_idx == -1 ? 0 : insc_idx);
 	stop = (insc_idx == -1 ? MAX_AUTO_INSCRIPTIONS : insc_idx + 1);
 
@@ -6957,7 +6971,7 @@ bool apply_auto_inscriptions_aux(int slot, int insc_idx, bool force) {
 				//too spammy when auto-inscribing the whole inventory -- c_msg_format("\377yInvalid regular expression (%d) in auto-inscription #%d.", ires, i);
 				continue;
 			}
-			if (regexec(&re_src, iname, REGEX_ARRAY_SIZE, pmatch, 0)) {
+			if (regexec(&re_src, match_name, REGEX_ARRAY_SIZE, pmatch, 0)) {
 				regfree(&re_src);
 				continue;
 			}
@@ -6981,7 +6995,7 @@ bool apply_auto_inscriptions_aux(int slot, int insc_idx, bool force) {
 
 			/* prepare */
 			strcpy(ex_buf, match);
-			ex2 = iname;
+			ex2 = match_name;
 			found = FALSE;
 
 			do {
@@ -7062,6 +7076,8 @@ int scan_auto_inscriptions_for_limit(char *iname) {
 	char *ex2, ex_buf2[ONAME_LEN];
 	char *match, tag_buf[ONAME_LEN];
 	bool found, has_insc = FALSE;
+	char match_buf[ONAME_LEN];
+	iname = artifact_match_name(iname, match_buf);
 #ifdef REGEX_SEARCH
 	int ires = -999;
 	regex_t re_src;

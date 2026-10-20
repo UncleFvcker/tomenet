@@ -2578,7 +2578,7 @@ void object_desc(int Ind, char *buf, object_type *o_ptr, int pref, int mode) {
 	    is_atleast(&p_ptr->version, 4, 9, 6, 0, 0, 2)) {
 		t = object_desc_str(t, true_artifact_p(o_ptr) ? "[TA] " : "[RA] ");
 		if (use_color && can_use_admin(Ind, o_ptr) && !check_guard_inscription(o_ptr->note, 'U'))
-			t = object_desc_str(t, true_artifact_p(o_ptr) ? "\377!" : "\377@");
+			t = object_desc_str(t, true_artifact_p(o_ptr) ? "\377:" : "\377;");
 	}
 
 	/* hack: questors have an arbitrary name */

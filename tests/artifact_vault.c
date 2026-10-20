@@ -124,7 +124,7 @@ void check_artifact_vault(void) {
     char name[ONAME_LEN]; object_type description_item = inventory[0][0];
     description_item.sigil = 0; description_item.owner = 0;
     __real_object_desc(1, name, &description_item, TRUE, 3);
-    assert(strstr(name, "[TA]") && strstr(name, "\377!"));
+    assert(strstr(name, "[TA]") && strstr(name, "\377:"));
     __real_object_desc(0, name, &inventory[0][0], TRUE, 256);
     assert(!strstr(name, "[TA]") && !strchr(name, '\377'));
     /* Visible artifacts buried in a pile retain their color even in water. */

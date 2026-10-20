@@ -129,8 +129,8 @@ int color_char_to_attr(char c) {
 	case '7': return(TERM_SEL_BLUE);
 	case '8': return(TERM_SRCLITE);
 	case '9': return(TERM_SEL_GREEN);
-	case '!': return(TERM_TRUE_ARTIFACT);
-	case '@': return(TERM_RANDOM_ARTIFACT);
+	case ':': return(TERM_TRUE_ARTIFACT);
+	case ';': return(TERM_RANDOM_ARTIFACT);
 
 	default: return(-1);
 	}
@@ -226,8 +226,8 @@ char color_attr_to_char(byte a) {
 	case TERM_SEL_BLUE: return('7');
 	case TERM_SRCLITE: return('8');
 	case TERM_SEL_GREEN: return('9');
-	case TERM_TRUE_ARTIFACT: return('!');
-	case TERM_RANDOM_ARTIFACT: return('@');
+	case TERM_TRUE_ARTIFACT: return(':');
+	case TERM_RANDOM_ARTIFACT: return(';');
 
 	default: return('w');
 	}
