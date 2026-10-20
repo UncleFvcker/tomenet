@@ -6251,7 +6251,8 @@ static void display_artifact_catalog(int Ind, house_type *h_ptr) {
 			/* Format the catalog without changing the stored item's identification state. */
 			forge.name1 = i;
 			object_desc(0, base, &forge, FALSE, 256);
-			snprintf(name, sizeof(name), "[%s] %.120s", slot >= 0 ? format("Stored x%d", count) : "Missing", base);
+			snprintf(name, sizeof(name), "[%s] %.120s",
+			    slot < 0 ? "Missing" : count > 1 ? format("Stored x%d", count) : "Stored", base);
 		}
 		Send_store(Ind, i, slot >= 0 ? TERM_TRUE_ARTIFACT : TERM_SLATE,
 		    slot >= 0 ? h_ptr->stock[slot].weight : 0,
