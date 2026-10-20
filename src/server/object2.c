@@ -13809,6 +13809,17 @@ bool erase_or_locate_artifact(int a_idx, bool erase) {
 	object_desc(0, o_name, &forge, TRUE, 0);//fixed diz for admins
 	object_desc(0, o_name_short, &forge, TRUE, 256);//short name for telling people
 
+#ifndef USE_MANG_HOUSE_ONLY
+	if (artifact_in_vault(a_idx)) {
+		s_printf("ARTIFACT_%s: %d - shared artifact vault '%s'\n", erase ? "ERASE" : "LOCATE", a_idx, o_name);
+		if (erase && erase_vault_artifact(a_idx)) {
+			handle_art_d(a_idx);
+			msg_broadcast_format(0, "\374\377M* \377U%s has been lost once more. \377M*", o_name_short);
+		}
+		return(TRUE);
+	}
+#endif
+
 	/* objects on the floor/in monster inventories */
 	for (i = 0; i < o_max; i++) {
 		o_ptr = &o_list[i];

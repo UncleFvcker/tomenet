@@ -4,6 +4,8 @@
 #include <assert.h>
 
 static bool active;
+static bool metadata_stub;
+void test_item_metadata(bool enabled) { metadata_stub = enabled; }
 static int carried, dropped;
 static object_kind kinds[2];
 static object_type inventory[INVEN_TOTAL], floor_objects[2];
@@ -13,11 +15,11 @@ static artifact_type artifacts[2];
 void test_floor_item(int idx);
 cptr __real_lookup_accountname(int id);
 cptr __wrap_lookup_accountname(int id) {
-	return active ? "test account" : __real_lookup_accountname(id);
+	return active || metadata_stub ? "test account" : __real_lookup_accountname(id);
 }
 void __real_object_desc_store(int Ind, char *buf, object_type *o, int pref, int mode);
 void __wrap_object_desc_store(int Ind, char *buf, object_type *o, int pref, int mode) {
-	if (active) strcpy(buf, "test item");
+	if (active || metadata_stub) strcpy(buf, "test item");
 	else __real_object_desc_store(Ind, buf, o, pref, mode);
 }
 s16b __real_inven_carry(int Ind, object_type *o);

@@ -2894,6 +2894,11 @@ void get_object_visual(char32_t *cp, byte *ap, object_type *o_ptr, player_type *
 
 	/* hack: questors may have specific attr */
 	if (o_ptr->questor) (*ap) = q_info[o_ptr->quest - 1].questor[o_ptr->questor_idx].oattr;
+	if (artifact_p(o_ptr)) {
+		bool animated = is_atleast(&p_ptr->version, 4, 9, 6, 0, 0, 2);
+		(*ap) = true_artifact_p(o_ptr) ? (animated ? TERM_TRUE_ARTIFACT : TERM_YELLOW) :
+		    (animated ? TERM_RANDOM_ARTIFACT : TERM_VIOLET);
+	}
 }
 
 /*
@@ -3884,17 +3889,25 @@ void map_info(int Ind, int y, int x, byte *ap, char32_t *cp, bool palanim) {
 #endif
 	    ) {
 		struct c_special *cs_ptr;
+		int visible_object = c_ptr->o_idx, idx;
+		for (idx = c_ptr->o_idx; idx; idx = o_list[idx].next_o_idx) {
+			if (!p_ptr->obj_vis[idx] && !p_ptr->admin_dm) continue;
+			if (true_artifact_p(&o_list[idx])) { visible_object = idx; break; }
+			if (o_list[idx].name1 == ART_RANDART) visible_object = idx;
+		}
 
 		/* Hack - Traps override objects while searching - mikaelh */
 		if (!p_ptr->searching || !((cs_ptr = GetCS(c_ptr, CS_TRAPS)) && cs_ptr->sc.trap.found)) {
 			/* Memorized objects */
 			/* Hack -- the dungeon master knows where everything is */
-			if ((p_ptr->obj_vis[c_ptr->o_idx]) || (p_ptr->admin_dm)) {
-				get_object_visual(cp, ap, &o_list[c_ptr->o_idx], p_ptr);
+			if ((p_ptr->obj_vis[visible_object]) || (p_ptr->admin_dm)) {
+				get_object_visual(cp, ap, &o_list[visible_object], p_ptr);
 
 				/* Hack -- always l.blue if underwater */
-				if (feat == FEAT_TAINTED_WATER) (*ap) = TERM_UMBER; //dirty water
-				else if (feat_is_water(feat)) (*ap) = TERM_L_BLUE;
+				if (!artifact_p(&o_list[visible_object])) {
+					if (feat == FEAT_TAINTED_WATER) (*ap) = TERM_UMBER; //dirty water
+					else if (feat_is_water(feat)) (*ap) = TERM_L_BLUE;
+				}
 
 #ifdef ENABLE_DEMOLITIONIST
 				/* Hack -- thrown aka non-planted, armed demolition charges flicker as the fuse is lit */

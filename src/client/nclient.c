@@ -5468,6 +5468,13 @@ int Receive_store_info(void) {
 		if ((n = Packet_scanf(&rbuf, "%c%hd%s%s%hd%d", &ch, &store_num, store_name, owner_name, &num_items, &max_cost)) <= 0) return(n);
 	}
 
+	if (!strcmp(owner_name, "Shared Vault") &&
+	    (strcmp(c_store.owner_name, owner_name) ||
+	    prefix(store_name, "True Artifacts") != prefix(c_store.store_name, "True Artifacts"))) {
+		memset(store.stock, 0, STORE_INVEN_MAX * sizeof(object_type));
+		store_top = 0;
+		store_last_item = -1;
+	}
 	store.stock_num = num_items >= 0 ? num_items : 0; /* Hack: Use num_items to encode SPECIAL store flag */
 	c_store.max_cost = max_cost;
 	strncpy(c_store.owner_name, owner_name, 40);

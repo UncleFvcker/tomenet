@@ -6814,11 +6814,21 @@ int Send_history(int Ind, int line, cptr hist) {
  *
  * TODO: Don't transmit sval for flavoured items if player is unaware of the flavour! Instead, transmit 255.
  */
+static byte item_attr_for_client(int Ind, byte attr) {
+	if (!is_atleast(&Players[Ind]->version, 4, 9, 6, 0, 0, 2)) {
+		if (attr == TERM_TRUE_ARTIFACT) return(TERM_YELLOW);
+		if (attr == TERM_RANDOM_ARTIFACT) return(TERM_VIOLET);
+	}
+	return(attr);
+}
+
 int Send_inven(int Ind, char pos, byte attr, int wgt, object_type *o_ptr, cptr name) {
 	player_type *p_ptr = Players[Ind], *p_ptr2 = NULL;
 	connection_t *connp = Conn[Players[Ind]->conn], *connp2;
 	char uses_dir = 0; /* flag whether a rod requires a direction for zapping or not */
 	s16b pval = 0, sval = !object_has_flavor(o_ptr->k_idx) || object_aware_p(Ind, o_ptr) ? o_ptr->sval : 255; /* unfortunately -1 doesn't work as object_type tval is 'byte'; fortunately there are no flavoured items with sval 255 */
+
+	attr = item_attr_for_client(Ind, attr);
 
 	if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 		errno = 0;
@@ -6892,6 +6902,8 @@ int Send_subinven(int Ind, char ipos, char pos, byte attr, int wgt, object_type 
 	char uses_dir = 0, uses_dir2, uses_dir_mod; /* flag whether a rod requires a direction for zapping or not */
 	s16b pval = 0, sval = !object_has_flavor(o_ptr->k_idx) || object_aware_p(Ind, o_ptr) ? o_ptr->sval : 255; /* unfortunately -1 doesn't work as object_type tval is 'byte'; fortunately there are no flavoured items with sval 255 */
 
+	attr = item_attr_for_client(Ind, attr);
+
 	if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 		errno = 0;
 		plog(format("Connection not ready for inven (%d.%d.%d)",
@@ -6954,6 +6966,8 @@ int Send_inven_wide(int Ind, char pos, byte attr, int wgt, object_type *o_ptr, c
 	connection_t *connp = Conn[p_ptr->conn], *connp2;
 	char ident = 0; // instead of 'uses_dir' like in Send_inven, Send_equip and Send_equip_wide, we abuse 'ident'
 	s16b pval = 0, sval = !object_has_flavor(o_ptr->k_idx) || object_aware_p(Ind, o_ptr) ? o_ptr->sval : 255; /* unfortunately -1 doesn't work as object_type tval is 'byte'; fortunately there are no flavoured items with sval 255 */
+
+	attr = item_attr_for_client(Ind, attr);
 
 	if (p_ptr->esp_link_flags & LINKF_VIEW_DEDICATED) return(0);
 
@@ -7040,6 +7054,8 @@ int Send_equip(int Ind, char pos, byte attr, int wgt, object_type *o_ptr, cptr n
 	int slot = INVEN_WIELD + pos - 'a';
 	bool forward = FALSE;
 	s16b pval = 0, sval = !object_has_flavor(o_ptr->k_idx) || object_aware_p(Ind, o_ptr) ? o_ptr->sval : 255; /* unfortunately -1 doesn't work as object_type tval is 'byte'; fortunately there are no flavoured items with sval 255 */
+
+	attr = item_attr_for_client(Ind, attr);
 
 	if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 		errno = 0;
@@ -7154,6 +7170,8 @@ int Send_equip_wide(int Ind, char pos, byte attr, int wgt, object_type *o_ptr, c
 	int slot = INVEN_WIELD + pos - 'a';
 	bool forward = FALSE;
 	s16b pval = 0, sval = !object_has_flavor(o_ptr->k_idx) || object_aware_p(Ind, o_ptr) ? o_ptr->sval : 255; /* unfortunately -1 doesn't work as object_type tval is 'byte'; fortunately there are no flavoured items with sval 255 */
+
+	attr = item_attr_for_client(Ind, attr);
 
 	if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 		errno = 0;
@@ -9555,6 +9573,8 @@ int Send_store(int Ind, s16b pos, byte attr, int wgt, int number, int price, cpt
 
 #endif
 
+	attr = item_attr_for_client(Ind, attr);
+
 	if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 		errno = 0;
 		plog(format("Connection not ready for store item (%d.%d.%d)",
@@ -9605,6 +9625,8 @@ int Send_store_wide(int Ind, s16b pos, byte attr, int wgt, int number, int price
 	player_type *p_ptr2 = NULL; /*, *p_ptr = Players[Ind];*/
 
 #endif
+
+	attr = item_attr_for_client(Ind, attr);
 
 	if (!BIT(connp->state, CONN_PLAYING | CONN_READY)) {
 		errno = 0;

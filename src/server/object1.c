@@ -2574,6 +2574,12 @@ void object_desc(int Ind, char *buf, object_type *o_ptr, int pref, int mode) {
 
 	/* Start dumping the result */
 	t = buf;
+	if (Ind && known && artifact_p(o_ptr) && !(mode & (256 | 512)) &&
+	    is_atleast(&p_ptr->version, 4, 9, 6, 0, 0, 2)) {
+		t = object_desc_str(t, true_artifact_p(o_ptr) ? "[TA] " : "[RA] ");
+		if (use_color && can_use_admin(Ind, o_ptr) && !check_guard_inscription(o_ptr->note, 'U'))
+			t = object_desc_str(t, true_artifact_p(o_ptr) ? "\377!" : "\377@");
+	}
 
 	/* hack: questors have an arbitrary name */
 	if (o_ptr->questor) basenm = q_info[o_ptr->quest - 1].questor[o_ptr->questor_idx].name;
@@ -3011,6 +3017,8 @@ void object_desc(int Ind, char *buf, object_type *o_ptr, int pref, int mode) {
 	}
 
 	/* Print level and owning */
+	if (Ind && known && artifact_p(o_ptr) && !(mode & (256 | 512)) &&
+	    is_atleast(&p_ptr->version, 4, 9, 6, 0, 0, 2)) t = object_desc_str(t, "\377.");
 	t = object_desc_chr(t, ' ');
 	t = object_desc_chr(t, '{');
 	if (o_ptr->owner) {
@@ -7526,6 +7534,7 @@ byte get_book_name_color(object_type *o_ptr) {
 
 byte get_attr_from_tval(object_type *o_ptr) {
 	int attr = tval_to_attr[o_ptr->tval];
+	if (artifact_p(o_ptr)) return(true_artifact_p(o_ptr) ? TERM_TRUE_ARTIFACT : TERM_RANDOM_ARTIFACT);
 
 	/* Gift wrappings: Get the attr from sval */
 	if ((o_ptr->tval == TV_SPECIAL || o_ptr->tval == TV_JUNK) && o_ptr->sval >= SV_GIFT_WRAPPING_START && o_ptr->sval <= SV_GIFT_WRAPPING_END) return(k_info[o_ptr->k_idx].d_attr);

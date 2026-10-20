@@ -159,6 +159,7 @@ void check_physical_runes(void);
 void check_monster_rules(void);
 void check_boss_store(void);
 void check_cursed_inversion(void);
+void check_artifact_vault(void);
 void test_do_recall(int Ind);
 
 static void check_world_recall(void) {
@@ -246,6 +247,7 @@ int main(void) {
 	check_item_sharing();
 	check_physical_runes();
 	check_cursed_inversion();
+	check_artifact_vault();
 	check_skill_potion();
 	check_skill_respec();
 	check_world_recall();

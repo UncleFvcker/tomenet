@@ -5171,6 +5171,9 @@ static bool leave_store = FALSE;
 /* Remote fixed-house UI session marker base (store_action = base + house index) */
 #define STORE_ACTION_REMOTE_FIXED_HOME_BASE 9001
 #define SHARED_VAULT_HOUSE_TAG "shared_vault"
+#define ARTIFACT_VAULT_HOUSE_TAG "artifact_vault"
+static void toggle_artifact_vault(int Ind);
+static void refresh_shared_vaults(void);
 #endif
 
 
@@ -6026,6 +6029,14 @@ void store_exec_command(int Ind, int action, int item, int item2, int amt, int g
 	store_type *st_ptr;
 	int i;
 
+#ifndef USE_MANG_HOUSE_ONLY
+	if (action == STORE_ACTION_VAULT_TOGGLE) {
+		toggle_artifact_vault(Ind);
+		return;
+	}
+#endif
+	if (action < 0 || action >= max_ba_idx) return;
+
 	/* MEGAHACK -- accept house extension command */
 	if (p_ptr->store_num == STORE_HOME || p_ptr->store_num == STORE_HOME_DUN) {
 		if (ba_info[action].action == BACT_EXTEND_HOUSE) home_extend(Ind);
@@ -6079,7 +6090,8 @@ bool is_fixed_house_session(player_type *p_ptr) {
 	int h_idx = p_ptr->store_action - STORE_ACTION_REMOTE_FIXED_HOME_BASE;
 
 	if (h_idx >= 0 && h_idx < num_houses &&
-	    !strcmp(houses[h_idx].tag, SHARED_VAULT_HOUSE_TAG))
+	    (!strcmp(houses[h_idx].tag, SHARED_VAULT_HOUSE_TAG) ||
+	    !strcmp(houses[h_idx].tag, ARTIFACT_VAULT_HOUSE_TAG)))
 		return(TRUE);
 	return(FALSE);
 }
@@ -6127,7 +6139,7 @@ static house_type *get_active_trad_house(int Ind, int *h_idx) {
 	return(&houses[*h_idx]);
 }
 
-static house_type *create_remote_trad_house(int Ind, int *h_idx) {
+static house_type *create_remote_trad_house(int Ind, int *h_idx, cptr tag) {
 	house_type *h_ptr;
 
 	if ((house_alloc - num_houses) < 32) {
@@ -6163,25 +6175,130 @@ static house_type *create_remote_trad_house(int Ind, int *h_idx) {
 	h_ptr->stock_size = STORE_INVEN_MAX;
 	h_ptr->stock_num = 0;
 	C_MAKE(h_ptr->stock, h_ptr->stock_size, object_type);
-	strcpy(h_ptr->tag, SHARED_VAULT_HOUSE_TAG);
+	strcpy(h_ptr->tag, tag);
 
 	num_houses++;
 
 	return(h_ptr);
 }
 
-static house_type *find_remote_trad_house(int *h_idx) {
+static house_type *find_remote_trad_house(int *h_idx, cptr tag) {
 	int i;
 
 	for (i = 0; i < num_houses; i++) {
 		if (!(houses[i].flags & HF_TRAD)) continue;
-		if (strcmp(houses[i].tag, SHARED_VAULT_HOUSE_TAG)) continue;
+		if (strcmp(houses[i].tag, tag)) continue;
 
 		*h_idx = i;
 		return(&houses[i]);
 	}
 
 	return(NULL);
+}
+
+static bool is_artifact_vault(house_type *h_ptr) {
+	return(!strcmp(h_ptr->tag, ARTIFACT_VAULT_HOUSE_TAG));
+}
+
+static bool vault_catalog_artifact(int a_idx) {
+	object_type forge;
+	if (a_idx <= 0 || a_idx >= max_a_idx || !a_info[a_idx].name ||
+	    !lookup_kind(a_info[a_idx].tval, a_info[a_idx].sval)) return(FALSE);
+	WIPE(&forge, object_type);
+	forge.name1 = a_idx;
+	return(!admin_artifact_p(&forge));
+}
+
+/* Catalog positions are artifact IDs, so another player's withdrawal cannot shift them. */
+static int artifact_vault_slot(house_type *h_ptr, int a_idx) {
+	int i;
+	if (!vault_catalog_artifact(a_idx)) return(-1);
+	for (i = 0; i < h_ptr->stock_num; i++)
+		if (h_ptr->stock[i].k_idx && h_ptr->stock[i].name1 == a_idx) return(i);
+	return(-1);
+}
+
+bool artifact_in_vault(int a_idx) {
+	int h_idx;
+	house_type *h_ptr = find_remote_trad_house(&h_idx, ARTIFACT_VAULT_HOUSE_TAG);
+	return(h_ptr && artifact_vault_slot(h_ptr, a_idx) >= 0);
+}
+
+bool erase_vault_artifact(int a_idx) {
+	int h_idx, slot;
+	house_type *h_ptr = find_remote_trad_house(&h_idx, ARTIFACT_VAULT_HOUSE_TAG);
+	if (!h_ptr || (slot = artifact_vault_slot(h_ptr, a_idx)) < 0) return(FALSE);
+	h_ptr->stock[slot].number = 0;
+	home_item_optimize(h_ptr, slot);
+	refresh_shared_vaults();
+	return(TRUE);
+}
+
+static void display_artifact_catalog(int Ind, house_type *h_ptr) {
+	int i, slot, j, count;
+	char name[ONAME_LEN], base[ONAME_LEN];
+	object_type forge;
+	for (i = 0; i < max_a_idx; i++) {
+		WIPE(&forge, object_type);
+		name[0] = 0;
+		slot = -1;
+		if (vault_catalog_artifact(i)) {
+			invcopy(&forge, lookup_kind(a_info[i].tval, a_info[i].sval));
+			slot = artifact_vault_slot(h_ptr, i);
+			count = 0;
+			for (j = 0; j < h_ptr->stock_num; j++)
+				if (h_ptr->stock[j].name1 == i) count += h_ptr->stock[j].number;
+			/* Format the catalog without changing the stored item's identification state. */
+			forge.name1 = i;
+			object_desc(0, base, &forge, FALSE, 256);
+			snprintf(name, sizeof(name), "[%s] %.120s", slot >= 0 ? format("Stored x%d", count) : "Missing", base);
+		}
+		Send_store(Ind, i, slot >= 0 ? TERM_TRUE_ARTIFACT : TERM_SLATE,
+		    slot >= 0 ? h_ptr->stock[slot].weight : 0,
+		    slot >= 0 ? h_ptr->stock[slot].number : 0, 0, name, forge.tval, forge.sval, 0, "");
+	}
+}
+
+static void display_shared_vault(int Ind, house_type *h_ptr) {
+	int i, stored = 0, total = 0;
+	char title[40];
+	if (is_artifact_vault(h_ptr)) {
+		for (i = 1; i < max_a_idx; i++) if (vault_catalog_artifact(i)) {
+			total++;
+			if (artifact_vault_slot(h_ptr, i) >= 0) stored++;
+		}
+		snprintf(title, sizeof(title), "True Artifacts %d/%d", stored, total);
+		Send_store_info(Ind, STORE_HOME, title, "Shared Vault", max_a_idx, 0, TERM_YELLOW, '+');
+		display_artifact_catalog(Ind, h_ptr);
+	} else {
+		Send_store_info(Ind, STORE_HOME, "Items", "Shared Vault", h_ptr->stock_num, h_ptr->stock_size, TERM_L_UMBER, '+');
+		display_house_inventory(Ind, h_ptr);
+	}
+	store_prt_gold(Ind);
+	show_building(Ind, &town[0].townstore[STORE_HOME]);
+}
+
+static void refresh_shared_vaults(void) {
+	int i, h_idx;
+	for (i = 1; i <= NumPlayers; i++) {
+		if (!Players[i] || Players[i]->store_num != STORE_HOME || !is_fixed_house_session(Players[i])) continue;
+		h_idx = Players[i]->store_action - STORE_ACTION_REMOTE_FIXED_HOME_BASE;
+		display_trad_house(i, &houses[h_idx]);
+	}
+}
+
+static void toggle_artifact_vault(int Ind) {
+	player_type *p_ptr = Players[Ind];
+	int h_idx;
+	house_type *h_ptr;
+	if (p_ptr->store_num != STORE_HOME || p_ptr->wpos.wz || !is_fixed_house_session(p_ptr) ||
+	    !is_atleast(&p_ptr->version, 4, 9, 6, 0, 0, 2)) return;
+	h_ptr = get_active_trad_house(Ind, &h_idx);
+	if (!h_ptr) return;
+	h_ptr = find_remote_trad_house(&h_idx, is_artifact_vault(h_ptr) ? SHARED_VAULT_HOUSE_TAG : ARTIFACT_VAULT_HOUSE_TAG);
+	if (!h_ptr) return;
+	p_ptr->store_action = STORE_ACTION_REMOTE_FIXED_HOME_BASE + h_idx;
+	display_trad_house(Ind, h_ptr);
 }
 
 /*
@@ -6817,6 +6934,7 @@ void home_sell(int Ind, int item, int amt) {
 	object_type		*o_ptr;
 	char			o_name[ONAME_LEN];
 	house_type		*h_ptr;
+	bool vault_session = is_fixed_house_session(p_ptr), collection = FALSE;
 
 	/* This should never happen */
 	if (p_ptr->store_num != STORE_HOME && p_ptr->store_num != STORE_HOME_DUN) {
@@ -6833,6 +6951,10 @@ void home_sell(int Ind, int item, int amt) {
 
 	/* Hack: drop gold - we create a 'gold' item in the overflow slot to allow normal inventory-handling on it */
 	if (item == 9999) {
+		if (vault_session) {
+			h_ptr = find_remote_trad_house(&h_idx, SHARED_VAULT_HOUSE_TAG);
+			if (!h_ptr || h_ptr->stock_num >= h_ptr->stock_size) return;
+		}
 		item = INVEN_PACK;
 		o_ptr = &p_ptr->inventory[item];
 		/* Paranoia: If there is really an item occupying the overflow slot already, we must abort. */
@@ -6886,6 +7008,11 @@ void home_sell(int Ind, int item, int amt) {
 		amt = 1; //hack amt back to something normal (matching the object number)
 
 		item_pos = home_carry(Ind, h_ptr, o_ptr);
+		if (vault_session) {
+			invwipe(o_ptr);
+			refresh_shared_vaults();
+			return;
+		}
 		/* Resend the basic store info */
 		display_trad_house(Ind, h_ptr);
 		/* Re-display if item is now in store */
@@ -6932,7 +7059,14 @@ void home_sell(int Ind, int item, int amt) {
 		return;
 	}
 
-	if (cfg.anti_arts_house && undepositable_artifact_p(o_ptr)) {
+	if (!o_ptr->k_idx || amt > o_ptr->number) return;
+	if (vault_session) {
+		collection = true_artifact_p(o_ptr) && vault_catalog_artifact(o_ptr->name1);
+		h_ptr = find_remote_trad_house(&h_idx, collection ? ARTIFACT_VAULT_HOUSE_TAG : SHARED_VAULT_HOUSE_TAG);
+		if (!h_ptr) return;
+	}
+
+	if (!collection && cfg.anti_arts_house && undepositable_artifact_p(o_ptr)) {
 		msg_print(Ind, "\377yYou cannot stock this artifact.");
 		return;
 	}
@@ -6972,10 +7106,10 @@ void home_sell(int Ind, int item, int amt) {
 		else o_ptr = &o_list[0 - item];
 	}
 
-	clear_comboset(o_ptr);
+	if (!collection) clear_comboset(o_ptr);
 
 	/* Sigil (reset it) - Kurzel (fix the list house exploit) */
-	if (sold_obj.sigil) {
+	if (!collection && sold_obj.sigil) {
 		msg_print(Ind, "\377yThe sigil fades away.");
 		sold_obj.sigil = 0;
 		sold_obj.sseed = 0;
@@ -7022,7 +7156,7 @@ void home_sell(int Ind, int item, int amt) {
 	handle_stuff(Ind);
 
 	/* Artifact won't be deposited in your home */
-	if (undepositable_artifact_p(&sold_obj) &&
+	if (!collection && undepositable_artifact_p(&sold_obj) &&
 	    (cfg.anti_arts_house || (p_ptr->total_winner && !winner_artifact_p(o_ptr) && cfg.kings_etiquette))) {
 		handle_art_d(sold_obj.name1);
 		return;
@@ -7031,6 +7165,11 @@ void home_sell(int Ind, int item, int amt) {
 	/* The store gets that (known) item */
 	//if (sold_obj.tval != 8)	// What was it for.. ?
 	item_pos = home_carry(Ind, h_ptr, &sold_obj);
+	if (vault_session) {
+		if (collection) a_info[sold_obj.name1].carrier = 0;
+		refresh_shared_vaults();
+		return;
+	}
 	//item_pos = store_carry(p_ptr->store_num, &sold_obj);
 
 	/* Resend the basic store info */
@@ -7124,6 +7263,13 @@ void home_purchase(int Ind, int item, int amt) {
 
 	h_ptr = get_active_trad_house(Ind, &h_idx);
 	if (!h_ptr) return;
+	if (is_artifact_vault(h_ptr)) {
+		item = artifact_vault_slot(h_ptr, item);
+		if (item < 0) {
+			msg_print(Ind, "That artifact is not currently stored.");
+			return;
+		}
+	}
 
 	/* Empty? */
 	if (h_ptr->stock_num <= 0) {
@@ -7401,6 +7547,11 @@ void home_purchase(int Ind, int item, int amt) {
 	}
 #endif
 	home_item_optimize(h_ptr, item);
+	if (is_fixed_house_session(p_ptr)) {
+		if (true_artifact_p(&sell_obj)) a_info[sell_obj.name1].carrier = p_ptr->id;
+		refresh_shared_vaults();
+		return;
+	}
 
 	/* Resend the basic store info */
 	display_trad_house(Ind, h_ptr);
@@ -7437,6 +7588,13 @@ void home_examine(int Ind, int item) {
 
 	h_ptr = get_active_trad_house(Ind, &h_idx);
 	if (!h_ptr) return;
+	if (is_artifact_vault(h_ptr)) {
+		item = artifact_vault_slot(h_ptr, item);
+		if (item < 0) {
+			msg_print(Ind, "That artifact is not currently stored.");
+			return;
+		}
+	}
 
 	/* Empty? */
 	if (h_ptr->stock_num <= 0) {
@@ -7523,6 +7681,10 @@ void display_house_entry(int Ind, int pos, house_type *h_ptr) {
 	char		o_name[ONAME_LEN];
 	byte		attr;
 	int		wgt;
+	if (is_artifact_vault(h_ptr)) {
+		display_shared_vault(Ind, h_ptr);
+		return;
+	}
 
 
 	/* This should never happen */
@@ -7572,6 +7734,10 @@ void display_house_entry(int Ind, int pos, house_type *h_ptr) {
 void display_house_inventory(int Ind, house_type *h_ptr) {
 	player_type *p_ptr = Players[Ind];
 	int k;
+	if (is_artifact_vault(h_ptr)) {
+		display_artifact_catalog(Ind, h_ptr);
+		return;
+	}
 
 	/* This should never happen */
 	if (p_ptr->store_num != STORE_HOME && p_ptr->store_num != STORE_HOME_DUN) return;
@@ -7593,6 +7759,10 @@ void display_house_inventory(int Ind, house_type *h_ptr) {
 void display_trad_house(int Ind, house_type *h_ptr) {
 	player_type *p_ptr = Players[Ind];
 	int c = h_ptr->colour; //note: p_ptr->tmp_x is used for non-tradhouses
+	if (is_fixed_house_session(p_ptr) && is_atleast(&p_ptr->version, 4, 9, 6, 0, 0, 2)) {
+		display_shared_vault(Ind, h_ptr);
+		return;
+	}
 
 	if (c >= 100 && !(p_ptr->mode & MODE_EVERLASTING)) c = 0;
 	else if (c < 100 && (p_ptr->mode & MODE_EVERLASTING)) c = 0;
@@ -7703,7 +7873,7 @@ void do_cmd_trad_house(int Ind) {
 void do_cmd_fixed_house(int Ind) {
 	player_type *p_ptr = Players[Ind];
 	house_type *h_ptr;
-	int h_idx;
+	int h_idx, art_idx, i;
 
 	if (!p_ptr) return;
 	if (p_ptr->wpos.wz != 0) {
@@ -7711,12 +7881,29 @@ void do_cmd_fixed_house(int Ind) {
 		return;
 	}
 
-	h_ptr = find_remote_trad_house(&h_idx);
+	h_ptr = find_remote_trad_house(&h_idx, SHARED_VAULT_HOUSE_TAG);
 	if (!h_ptr) {
-		h_ptr = create_remote_trad_house(Ind, &h_idx);
+		h_ptr = create_remote_trad_house(Ind, &h_idx, SHARED_VAULT_HOUSE_TAG);
 		if (!h_ptr) return;
 	}
+	if (!find_remote_trad_house(&art_idx, ARTIFACT_VAULT_HOUSE_TAG))
+		create_remote_trad_house(Ind, &art_idx, ARTIFACT_VAULT_HOUSE_TAG);
+	/* Creating the second house may reallocate houses[]. */
+	h_ptr = &houses[h_idx];
 	if (!prepare_trad_house_for_store(h_ptr, h_idx, "enter_shared")) return;
+	if (!prepare_trad_house_for_store(&houses[art_idx], art_idx, "enter_collection")) return;
+	for (i = 0; i < h_ptr->stock_num; i++) {
+		object_type *o_ptr = &h_ptr->stock[i];
+		if (!true_artifact_p(o_ptr) || !vault_catalog_artifact(o_ptr->name1)) continue;
+		if (houses[art_idx].stock_num >= houses[art_idx].stock_size) {
+			msg_print(Ind, "The artifact collection is full; existing items have been kept in the vault.");
+			break;
+		}
+		houses[art_idx].stock[houses[art_idx].stock_num++] = *o_ptr;
+		a_info[o_ptr->name1].carrier = 0;
+		o_ptr->number = 0;
+		home_item_optimize(h_ptr, i--);
+	}
 
 	p_ptr->store_num = STORE_HOME;
 	p_ptr->store_action = STORE_ACTION_REMOTE_FIXED_HOME_BASE + h_idx;

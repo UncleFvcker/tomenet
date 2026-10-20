@@ -30,6 +30,28 @@
 \
 
 
+Custom server update: artifact collection (2026-10-20)
+----------------------------------------------------
+With KINGS_ETIQUETTE and FALLENKINGS_ETIQUETTE set to false, current and former
+winners can find, carry and equip true artifacts. Existing installations must
+change both settings in lib/config/tomenet.cfg; keep all other settings.
+
+On the surface, press P then v to enter the Shared Vault. Press capital A inside
+the vault to switch between Items and True Artifacts. The collection is shared
+by the whole server and stores real items, including their runes and inscriptions.
+Stored artifacts shimmer gold; missing entries remain gray. Taking the last copy
+out makes its entry gray again. Ordinary level and mode restrictions still apply.
+True artifacts are stored separately and do not consume ordinary vault capacity.
+Their automatic expiration pauses only while in the collection, then resumes
+with the remaining lifetime on withdrawal. Unique artifacts remain unavailable
+for another drop while stored; legitimate duplicate crowns/Gronds stay legal.
+
+True artifact names and floor symbols shimmer gold; random artifacts shimmer
+purple. The no_flicker client option replaces these with fixed gold and purple.
+Known items show [TA]/[RA]; unidentified items keep their identity hidden.
+Use the matching updated client and server. Collection items are saved with
+the existing world save; migrate the entire lib/save directory as usual.
+
 Contents
 --------
 (0) Quickstart (If you don't like to read much :)

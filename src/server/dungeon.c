@@ -9071,7 +9071,11 @@ static void process_artifacts(void) {
 	int i = turn % (cfg.fps * 60);
 	player_type *p_ptr;
 
-	if (!cfg.persistent_artifacts && i < max_a_idx && a_info[i].timeout > 0) {
+	if (!cfg.persistent_artifacts && i < max_a_idx && a_info[i].timeout > 0
+#ifndef USE_MANG_HOUSE_ONLY
+	    && !artifact_in_vault(i)
+#endif
+	    ) {
  #if defined(IDDC_ARTIFACT_FAST_TIMEOUT) || defined(WINNER_ARTIFACT_FAST_TIMEOUT)
 		bool double_speed = FALSE;
  #endif

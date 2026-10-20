@@ -104,6 +104,15 @@ Compress-Archive -LiteralPath 'D:\Games\TomeNET-Server' -DestinationPath 'E:\Bac
 
 ## 5. 常见问题
 
+- 真神器收藏与闪烁显示更新：需要同时替换服务端 EXE 和客户端 `TomeNET.exe`，存档格式仍为 4.9.26。
+  已有服务器请将 `lib\config\tomenet.cfg` 中的 `KINGS_ETIQUETTE` 和 `FALLENKINGS_ETIQUETTE` 都改为 `false`，
+  否则旧配置仍会阻止胜利者持有真神器。保留其余配置项，不要覆盖整份配置。
+  在地表按 `P`、`v` 打开全服共享 Vault，按大写 `A` 切换 `Items` 与 `True Artifacts` 页面。
+  真神器自动存入独立收藏库存，显示完整目录：已储存金色闪烁，缺失项灰色；取走最后一件恢复灰色。
+  收藏储存实物，取回需满足原有模式与等级要求；收藏期间暂停自动到期，取回后继续剩余寿命。
+  唯一真神器在收藏中时不会再次掉落；皇冠、Grond 等合法多实例物品保留原有规则。
+  真神器名字和地面标识金色闪烁，随机神器紫色闪烁；若开启 `no_flicker`，则分别显示固定金色和紫色。
+  旧 Vault 中的真神器首次打开时自动迁入收藏。收藏随整个 `lib\save` 迁移，不需要单独复制客户端数据。
 - Hell Knight、吸血鬼及 Blood Sacrifice 形态的 Corrupted Priest，成功反转重诅咒装备后，
   该装备的 Aggr、生命／法力／经验流失、随机传送、禁止传送／施法、古老／魔苟斯诅咒、黑息及复制怪物效果失效。
   自动重新诅咒和额外禁止丢弃标记也仅在反转期间失效；诅咒本身、原有卸装限制及数值反转规则保留。

@@ -11294,7 +11294,7 @@ void handle_request_return_str(int Ind, int id, char *str) {
 
 			/* true artifact restrictions */
 			if (true_artifact_p(o_ptr)) {
-				if (cfg.anti_arts_hoard || p_ptr->total_winner) {
+				if (cfg.anti_arts_hoard || (p_ptr->total_winner && cfg.kings_etiquette)) {
 					msg_print(Ind, "\377yAs a royalty, you cannot hand over true artifacts.");
 					return;
 				}

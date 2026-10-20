@@ -48,7 +48,7 @@ for obj in objects:
 subprocess.run(["make", "-f", "makefile.win", "-j4", "CFLAGS=" + " ".join(FLAGS),
                 "LUACFLAGS=" + " ".join(FLAGS), *objects], cwd=SRC, check=True)
 test_sources = [ROOT / "tests" / name for name in
-                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c", "item_sharing.c", "physical_runes.c", "monster_rules.c", "boss_store.c", "cursed_inversion.c")]
+                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c", "item_sharing.c", "physical_runes.c", "monster_rules.c", "boss_store.c", "cursed_inversion.c", "artifact_vault.c")]
 wrappers = re.findall(r"__wrap_(\w+)\(", "\n".join(path.read_text() for path in test_sources))
 output_root = ROOT / ".github/workspace"
 output_root.mkdir(parents=True, exist_ok=True)
@@ -60,7 +60,8 @@ with tempfile.TemporaryDirectory(prefix="everlasting-", dir=output_root) as temp
     # Expose the existing static recall handler in the test translation unit only.
     dungeon_source = temp / "dungeon-test.c"
     dungeon_source.write_text(f'#include "{(SRC / "server/dungeon.c").as_posix()}"\n'
-                              'void test_do_recall(int Ind) { do_recall(Ind, FALSE); }\n')
+                              'void test_do_recall(int Ind) { do_recall(Ind, FALSE); }\n'
+                              'void test_process_artifacts(void) { process_artifacts(); }\n')
     dungeon_object = temp / "dungeon-test.o"
     subprocess.run(["gcc", *FLAGS, "-c", str(dungeon_source), "-o", str(dungeon_object)],
                    cwd=SRC, check=True)
@@ -83,6 +84,11 @@ bool test_monster_moves(int m_idx) { int moves[8] = {0}; return get_moves(1, m_i
 ''',
         "monster2": "",
         "save": '''
+void test_write_vault_house(FILE *file, house_type *house) {
+    static byte buffer[MAX_BUF_SIZE];
+    fff = file; fff_buf = buffer; fff_buf_pos = 0; xor_byte = 0; v_stamp = x_stamp = 0;
+    wr_house(house); wr_u32b(0x12345678); write_buffer(); fff = NULL; fff_buf = NULL;
+}
 void test_write_cursed_item(FILE *file, object_type *item) {
     static byte buffer[MAX_BUF_SIZE];
     fff = file; fff_buf = buffer; fff_buf_pos = 0; xor_byte = 0; v_stamp = x_stamp = 0;
@@ -103,6 +109,13 @@ void test_write_monsters(FILE *file, monster_type *monsters, int count, bool leg
 }
 ''',
         "load2": '''
+bool test_read_vault_house(FILE *file, int slot) {
+    static byte buffer[MAX_BUF_SIZE]; u32b marker;
+    fff = file; fff_buf = buffer; fff_buf_pos = MAX_BUF_SIZE; xor_byte = 0; v_check = x_check = 0;
+    sf_major = ssf_major = 4; sf_minor = ssf_minor = 9; sf_patch = ssf_patch = 26;
+    rd_house(slot); rd_u32b(&marker); fff = NULL; fff_buf = NULL;
+    return marker == 0x12345678;
+}
 bool test_read_cursed_item(FILE *file, object_type *item) {
     static byte buffer[MAX_BUF_SIZE]; u32b marker;
     fff = file; fff_buf = buffer; fff_buf_pos = MAX_BUF_SIZE; xor_byte = 0; v_check = x_check = 0;

@@ -26,6 +26,14 @@ static byte store_filter = STORE_FILTER_ALL;
 static int store_display[STORE_INVEN_MAX];
 static int store_display_num = 0;
 
+static bool shared_vault(void) {
+	return(store_num == STORE_HOME && !strcmp(c_store.owner_name, "Shared Vault"));
+}
+
+static bool artifact_catalog(void) {
+	return(shared_vault() && prefix(c_store.store_name, "True Artifacts"));
+}
+
 void display_store_inventory(void);
 
 static bool store_item_matches_filter_kind(byte filter, object_type *o_ptr);
@@ -123,6 +131,7 @@ static void store_rebuild_filter_view(void) {
 
 	store_display_num = 0;
 	for (i = 0; i < store.stock_num; i++) {
+		if (!store.stock[i].tval) continue;
 		if (!store_item_matches_filter2(&store.stock[i])) continue;
 		store_display[store_display_num++] = i;
 	}
@@ -556,6 +565,10 @@ static void store_examine(bool no_browse) {
 
 	/* Get the actual item */
 	o_ptr = &store.stock[item];
+	if (artifact_catalog() && !o_ptr->number) {
+		c_msg_print("That artifact is not currently stored.");
+		return;
+	}
 
 	/* Tell the server */
 	if (no_browse) { //hack: Don't browse books but truly examine them
@@ -615,6 +628,10 @@ static void store_purchase(bool one) {
 
 	/* Get the actual item */
 	o_ptr = &store.stock[item];
+	if (artifact_catalog() && !o_ptr->number) {
+		c_msg_print("That artifact is not currently stored.");
+		return;
+	}
 
 	/* Client-side check already, for item stacks: Too expensive? */
 	if (store_prices[item] > p_ptr->au) {
@@ -1087,6 +1104,13 @@ static void store_process_command(int cmd) {
 	/* BIG_MAP leads to big shops */
 	int entries = (screen_hgt == MAX_SCREEN_HGT) ? 26 : 12;
 	store_rebuild_filter_view();
+	if (cmd == 'A' && shared_vault()) {
+		store_filter = STORE_FILTER_ALL;
+		store_top = 0;
+		store_last_item = -1;
+		Send_store_command(STORE_ACTION_VAULT_TOGGLE, 0, 0, 0, 0);
+		return;
+	}
 	if (cmd == 'R') {
 		store_top = 0;
 		Send_msg("/refreshstore");
@@ -1397,6 +1421,7 @@ void c_store_prt_gold(void) {
 				put_str("R: Refresh stock (free)", y + 17 + spacer, x);
 				break;
 			}
+	if (shared_vault()) put_str("A: Switch vault page", y + 17 + spacer, x);
 
 #ifdef AU_DURING_BROWSE
 	if (special_line_type) Term_switch(1);
@@ -1417,8 +1442,14 @@ void do_redraw_store(void) {
 	redraw_store = FALSE;
 
 	if (shopping) {
+		if (shared_vault()) {
+			Term_erase(0, y, 255);
+			c_put_str(TERM_YELLOW, c_store.max_cost ?
+			    format("Shared Vault - Items: %d/%d", store.stock_num, c_store.max_cost) :
+			    format("Shared Vault - %s", c_store.store_name), y, 10);
+		}
 		/* hack: Display changed capacity if we just extended the house */
-		if ((store_num == STORE_HOME || store_num == STORE_HOME_DUN)
+		if (!shared_vault() && (store_num == STORE_HOME || store_num == STORE_HOME_DUN)
 		    && c_store.max_cost) {
 			char buf[1024];
 
@@ -1460,6 +1491,12 @@ void display_store(void) {
 		else
 			sprintf(buf, "%s", c_store.store_name);
 		prt(buf, y, 50);
+		if (shared_vault()) {
+			Term_erase(0, y, 255);
+			c_put_str(TERM_YELLOW, c_store.max_cost ?
+			    format("Shared Vault - Items: %d/%d", store.stock_num, c_store.max_cost) :
+			    format("Shared Vault - %s", c_store.store_name), y, 10);
+		}
 
 		/* Label the item descriptions */
 		put_str("Item Description", y + 2, 3);

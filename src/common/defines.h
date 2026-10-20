@@ -43,7 +43,7 @@
 #define VERSION_PATCH		6
 #define VERSION_EXTRA		0
 #define VERSION_BRANCH		0
-#define VERSION_BUILD		0
+#define VERSION_BUILD		2
 
 /* MAJOR/MINOR/PATCH version that counts as 'latest' (should be 0-15).
    If a player is online with a version > this && <= current version (VERSION_)
@@ -2036,6 +2036,7 @@
 #define MAX_STORE_ACTIONS	9	/* Max # of different store actions from ba_info.txt/bldg.c */
 
 #define STORE_INVEN_MAX		1024		/* Max number of discrete objs in inven [48] */
+#define STORE_ACTION_VAULT_TOGGLE 30000
 #define STORE_CHOICES		64		/* Number of items to choose stock from (defined in st_info.txt) */
 #define STORE_OBJ_LEVEL		5		/* Magic Level for normal stores */
 #define STORE_TURNOVER_DIV	3		/* Normal shop turnover, per day (stock_size / this = randint(amount of items to turnover)) */
@@ -8397,6 +8398,8 @@ extern int PlayerUID;
 #endif
 
 #define TERM_HALF	31	/* only the brighter colours */
+#define TERM_TRUE_ARTIFACT 96
+#define TERM_RANDOM_ARTIFACT 97
 
 #ifdef EXTENDED_TERM_COLOURS
  #define TERM_OLD_BNW	0x20	/* 32: black & white MASK, for admin wizards */

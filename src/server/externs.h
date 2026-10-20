@@ -2081,6 +2081,8 @@ extern void home_item_optimize(house_type *h_ptr, int item);
 extern void display_trad_house(int Ind, house_type *h_ptr);
 #ifndef USE_MANG_HOUSE_ONLY
 extern bool is_fixed_house_session(player_type *p_ptr);
+extern bool artifact_in_vault(int a_idx);
+extern bool erase_vault_artifact(int a_idx);
 #endif
 extern void display_house_entry(int Ind, int pos, house_type *h_ptr);
 

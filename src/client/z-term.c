@@ -779,6 +779,8 @@ static char get_shimmer_color() {
 
 static byte anim2static(byte attr) {
 	switch (attr) {
+	case TERM_TRUE_ARTIFACT: return(TERM_YELLOW);
+	case TERM_RANDOM_ARTIFACT: return(TERM_VIOLET);
 	case TERM_BNW:
 	case TERM_BNWM:
 	case TERM_BNWSR:
@@ -1137,6 +1139,10 @@ byte flick_colour(byte attr) {
 		return(anim2static(attr));
 #endif
 	}
+	if (attr == TERM_TRUE_ARTIFACT)
+		return(rand_int(5) ? TERM_YELLOW : TERM_L_UMBER);
+	if (attr == TERM_RANDOM_ARTIFACT)
+		return(rand_int(5) ? TERM_VIOLET : TERM_L_WHITE);
 
 #ifdef EXTENDED_TERM_COLOURS
 	if (!is_newer_than(&server_version, 4, 5, 1, 1, 0, 0)) {
