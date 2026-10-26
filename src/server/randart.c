@@ -57,11 +57,7 @@
 #endif
 
 
-/* How much power/curses is/are assigned to randarts.
-   With [40] default value, randarts can have up to
-   130 power ((40+79)*11/10), wich means even the top
-   randarts still have a slim chance (10 out of 99)
-   to not get AGGRAVATE - C. Blue */
+/* Ordinary randart power budget. Legacy seeds retain their original budget. */
 #define RANDART_QUALITY 40
 
 /* How many attempts to add abilities */
@@ -74,6 +70,68 @@
 
 /* Artifact/ego item return structure */
 static artifact_type randart;
+
+void randart_new(object_type *o_ptr) {
+	o_ptr->name1 = ART_RANDART;
+	o_ptr->randart_version = rand_int(10) == 0 ? RANDART_CHAOS : RANDART_NORMAL;
+	o_ptr->name3 = (u32b)rand_int(0x10000) << 16 | rand_int(0x10000);
+}
+
+static void chaos_artifact_make(object_type *o_ptr, artifact_type *a_ptr, object_kind *k_ptr) {
+	/* Each set bit is one equally likely, independently meaningful passive trait. */
+	const u32b candidates[7] = {
+		0xffffff7fU,
+		0xffffffffU,
+		TR3_SH_FIRE | TR3_SH_ELEC | TR3_SH_COLD | TR3_AUTO_CURSE | TR3_NO_TELE |
+		TR3_NO_MAGIC | TR3_WRAITH | TR3_TY_CURSE | TR3_FEATHER | TR3_AUTO_ID |
+		TR3_SEE_INVIS | TR3_REGEN_MANA | TR3_SLOW_DIGEST | TR3_REGEN | TR3_XTRA_MIGHT |
+		TR3_XTRA_SHOTS | TR3_DRAIN_EXP | TR3_TELEPORT | TR3_AGGRAVATE | TR3_BLESSED |
+		TR3_CURSED | TR3_HEAVY_CURSE | TR3_PERMA_CURSE,
+		TR4_NEVER_BLOW | TR4_BLACK_BREATH | TR4_LEVITATE | TR4_DG_CURSE | TR4_CLONE |
+		TR4_CLIMB | TR4_ANTIMAGIC_50 | TR4_ANTIMAGIC_30 | TR4_ANTIMAGIC_20 |
+		TR4_ANTIMAGIC_10 | TR4_EASY_USE | TR4_LITE1 | TR4_LITE2 | TR4_LITE3 | TR4_CURSE_NO_DROP,
+		TR5_DRAIN_MANA | TR5_DRAIN_HP | TR5_VORPAL | TR5_IMPACT | TR5_CRIT | TR5_LUCK |
+		TR5_WHITE_LIGHT | TR5_IGNORE_DISEN | TR5_RES_TELE | TR5_IGNORE_MANA | TR5_IGNORE_WATER |
+		TR5_RES_TIME | TR5_RES_MANA | TR5_DISARM | TR5_NO_ENCHANT | TR5_CHAOTIC |
+		TR5_INVIS | TR5_REFLECT | TR5_PASS_WATER,
+		TR6_RETURNING,
+		ESP_ORC | ESP_TROLL | ESP_DRAGON | ESP_GIANT | ESP_DEMON | ESP_UNDEAD | ESP_EVIL |
+		ESP_ANIMAL | ESP_DRAGONRIDER | ESP_GOOD | ESP_NONLIVING | ESP_UNIQUE | ESP_SPIDER | ESP_ALL
+	};
+	u32b flags[7] = {k_ptr->flags1, k_ptr->flags2,
+		k_ptr->flags3 | TR3_IGNORE_ACID | TR3_IGNORE_ELEC | TR3_IGNORE_FIRE | TR3_IGNORE_COLD,
+		k_ptr->flags4, k_ptr->flags5 | TR5_IGNORE_WATER, k_ptr->flags6, k_ptr->esp};
+	int pool[224], available = 0, i, group, bit, wanted = 1 + rand_int(30);
+	s32b power;
+	s64b price;
+#ifdef MSTAFF_MDEV_COMBO
+	/* Device absorption is a base-staff crafting action, unavailable to artifacts. */
+	if (k_ptr->tval == TV_MSTAFF) flags[2] &= ~TR3_ACTIVATE;
+#endif
+	for (group = 0; group < 7; group++) for (bit = 0; bit < 32; bit++)
+		if ((candidates[group] & (1U << bit)) && !(flags[group] & (1U << bit)))
+			pool[available++] = group * 32 + bit;
+	for (i = 0; i < wanted && available; i++) {
+		int pick = rand_int(available), trait = pool[pick];
+		flags[trait / 32] |= 1U << (trait % 32);
+		pool[pick] = pool[--available];
+	}
+	a_ptr->flags1 = flags[0]; a_ptr->flags2 = flags[1]; a_ptr->flags3 = flags[2];
+	a_ptr->flags4 = flags[3]; a_ptr->flags5 = flags[4]; a_ptr->flags6 = flags[5]; a_ptr->esp = flags[6];
+	a_ptr->tval = k_ptr->tval; a_ptr->sval = k_ptr->sval;
+	a_ptr->ac = k_ptr->ac; a_ptr->dd = k_ptr->dd; a_ptr->ds = k_ptr->ds;
+	a_ptr->weight = k_ptr->weight; a_ptr->max_num = 1;
+	a_ptr->pval = rand_int(31) - 10;
+	a_ptr->to_h = rand_int(61) - 10;
+	a_ptr->to_d = rand_int(61) - 10;
+	a_ptr->to_a = rand_int(61) - 10;
+	o_ptr->bpval = 0;
+	power = artifact_power(a_ptr);
+	price = power > 0 ? (s64b)power * power * power / 15 : 0;
+	a_ptr->cost = price > 2147483647L ? 2147483647L : price;
+	a_ptr->level = MIN(255, ABS(power));
+	if (a_ptr->pval) a_ptr->flags3 |= TR3_HIDE_TYPE;
+}
 
 #if 0 /*unused*/
 /*
@@ -430,7 +488,7 @@ s32b artifact_power(artifact_type *a_ptr) { //Kurzel
 	if (a_ptr->flags3 & TR3_REGEN_MANA) p += 8;
 	if ((a_ptr->flags3 & TR3_TELEPORT) && (a_ptr->flags3 & TR3_CURSED)) p -= 20;
 	if (a_ptr->flags3 & TR3_DRAIN_EXP) p -= 16;
-	if (a_ptr->flags3 & TR3_AGGRAVATE) p -= 8;
+	if ((a_ptr->flags3 & TR3_AGGRAVATE) || a_ptr->legacy_aggravation) p -= 8;
 	if (a_ptr->flags3 & TR3_BLESSED) p += 4;
 	if (a_ptr->flags3 & TR3_CURSED) p -= 4;
 	if (a_ptr->flags3 & TR3_HEAVY_CURSE) p -= 20;
@@ -1993,6 +2051,11 @@ artifact_type *randart_make(object_type *o_ptr) {
 
 	/* Wipe the artifact_type structure */
 	WIPE(&randart, artifact_type);
+	if (chaos_artifact_p(o_ptr)) {
+		chaos_artifact_make(o_ptr, a_ptr, k_ptr);
+		Rand_quick = FALSE;
+		return(a_ptr);
+	}
 
 
 	/*
@@ -2021,7 +2084,7 @@ artifact_type *randart_make(object_type *o_ptr) {
 	/* Really powerful items should aggravate. */
 	if (power > 100 + quality_boost) {
 		if (rand_int(100) < (power - 100 - quality_boost) * 3) {
-			aggravate_me = TRUE;
+			aggravate_me = o_ptr->randart_version == RANDART_LEGACY;
 		}
 	}
 
@@ -2381,6 +2444,11 @@ artifact_type *randart_make(object_type *o_ptr) {
 	if (a_ptr->pval) a_ptr->flags3 |= TR3_HIDE_TYPE;
 
 	/* Restore RNG */
+	/* Preserve the entire legacy roll, including its price/level, before removing this source only. */
+	if (aggravate_me && !curse_me && !(k_ptr->flags3 & TR3_AGGRAVATE)) {
+		a_ptr->flags3 &= ~TR3_AGGRAVATE;
+		a_ptr->legacy_aggravation = TRUE;
+	}
 	Rand_quick = FALSE;
 
 	/* Return a pointer to the artifact_type */

@@ -30,6 +30,29 @@
 \
 
 
+Custom server update: Chaos Artifacts (2026-10-26)
+------------------------------------------------
+Each new random artifact has a 10% chance to be a Chaos Artifact (CA).
+CA keeps base traits, damage dice, base AC, weight and existing activations,
+then adds 1..30 distinct, equally likely passive traits, including curses.
+Traits can occur on any equipment slot; overlapping effects remain present.
+All PVAL traits share one uniform value from -10 to +20, including zero.
+Hit, damage and AC bonuses each roll independently from -10 to +50.
+CA skips ordinary random artifact power budgets and generation caps.
+Known CA names show [CA] and shimmer cyan, as do their floor symbols.
+The no_flicker option uses fixed cyan. Existing RA never turn into CA.
+
+Ordinary RA no longer receive aggravation as power compensation. Existing RA
+lose only that source of aggravation, retaining their other rolls and prices.
+Base aggravation and randomly rolled curses remain possible.
+
+For ordinary players, raw melee blows N above 20 give 20 actual attacks with
+N/20 direct melee damage: 25 gives +25%, 40 gives +100%. The character sheet
+shows the bonus beside Blows/Round. This applies against monsters and players;
+administrators retain their original uncapped attacks without this multiplier.
+Update both client and server. Save format 4.9.27 reads older saves; back up
+the entire server lib/save before upgrading. Downgrades require that backup.
+
 Custom server update: artifact collection (2026-10-20)
 ----------------------------------------------------
 With KINGS_ETIQUETTE and FALLENKINGS_ETIQUETTE set to false, current and former

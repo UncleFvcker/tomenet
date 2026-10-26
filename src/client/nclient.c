@@ -6167,7 +6167,8 @@ int Receive_guild_config(void) {
 
 int Receive_skills(void) {
 	int n, i, bytes_read;
-	s16b tmp[12];
+	int count = is_atleast(&server_version, 4, 9, 6, 0, 0, 3) ? 13 : 12;
+	s16b tmp[13];
 	char ch;
 
 	if ((n = Packet_scanf(&rbuf, "%c", &ch)) <= 0) return(n);
@@ -6175,7 +6176,7 @@ int Receive_skills(void) {
 	bytes_read = n;
 
 	/* Read into skills info */
-	for (i = 0; i < 12; i++) {
+	for (i = 0; i < count; i++) {
 		if ((n = Packet_scanf(&rbuf, "%hd", &tmp[i])) <= 0) {
 			/* Rollback the socket buffer */
 			Sockbuf_rollback(&rbuf, bytes_read);
@@ -6196,6 +6197,7 @@ int Receive_skills(void) {
 	p_ptr->skill_dis = tmp[6];
 	p_ptr->skill_dev = tmp[7];
 	p_ptr->num_blow = tmp[8] & 0x1F; p_ptr->extra_blows = (tmp[8] & 0xE0) >> 5;
+	p_ptr->melee_blows = count == 13 ? tmp[12] : p_ptr->num_blow;
 	p_ptr->num_fire = tmp[9];
 	p_ptr->num_spell = tmp[10];
 	if (is_atleast(&server_version, 4, 7, 3, 1, 0, 0)) {
@@ -6695,9 +6697,9 @@ int Receive_idle(void) {
 /* Keep display-only rarity labels and colors out of automatic item matching. */
 static char *artifact_match_name(char *name, char *buf) {
 	char *reset;
-	if (!prefix(name, "[TA] ") && !prefix(name, "[RA] ")) return(name);
+	if (!prefix(name, "[TA] ") && !prefix(name, "[RA] ") && !prefix(name, "[CA] ")) return(name);
 	strcpy(buf, name + 5);
-	if (buf[0] == '\377' && (buf[1] == ':' || buf[1] == ';'))
+	if (buf[0] == '\377' && (buf[1] == ':' || buf[1] == ';' || buf[1] == '<'))
 		memmove(buf, buf + 2, strlen(buf + 2) + 1);
 	if ((reset = strstr(buf, "\377. {"))) memmove(reset, reset + 2, strlen(reset + 2) + 1);
 	return(buf);

@@ -2897,6 +2897,7 @@ void get_object_visual(char32_t *cp, byte *ap, object_type *o_ptr, player_type *
 	if (artifact_p(o_ptr)) {
 		bool animated = is_atleast(&p_ptr->version, 4, 9, 6, 0, 0, 2);
 		(*ap) = true_artifact_p(o_ptr) ? (animated ? TERM_TRUE_ARTIFACT : TERM_YELLOW) :
+		    chaos_artifact_p(o_ptr) ? (is_atleast(&p_ptr->version, 4, 9, 6, 0, 0, 3) ? TERM_CHAOS_ARTIFACT : TERM_L_BLUE) :
 		    (animated ? TERM_RANDOM_ARTIFACT : TERM_VIOLET);
 	}
 }
@@ -3893,7 +3894,8 @@ void map_info(int Ind, int y, int x, byte *ap, char32_t *cp, bool palanim) {
 		for (idx = c_ptr->o_idx; idx; idx = o_list[idx].next_o_idx) {
 			if (!p_ptr->obj_vis[idx] && !p_ptr->admin_dm) continue;
 			if (true_artifact_p(&o_list[idx])) { visible_object = idx; break; }
-			if (o_list[idx].name1 == ART_RANDART) visible_object = idx;
+			if (o_list[idx].name1 == ART_RANDART &&
+			    (chaos_artifact_p(&o_list[idx]) || !chaos_artifact_p(&o_list[visible_object]))) visible_object = idx;
 		}
 
 		/* Hack - Traps override objects while searching - mikaelh */

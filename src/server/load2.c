@@ -389,6 +389,10 @@ static void rd_item(object_type *o_ptr) {
 		o_ptr->name2 = old_name2;
 	}
 	rd_u32b(&o_ptr->name3);
+	o_ptr->randart_version = RANDART_LEGACY;
+	if (!older_than(4, 9, 27)) {
+		rd_byte(&o_ptr->randart_version);
+	}
 	if (!older_than(4, 6, 10)) {
 		rd_s32b(&o_ptr->timeout);
 		rd_s32b(&o_ptr->timeout_magic);
@@ -866,7 +870,7 @@ static void rd_item(object_type *o_ptr) {
 
 #ifdef USE_NEW_SHIELDS
 	/* Cap all old shields' +ac - C. Blue */
-	if (o_ptr->tval == TV_SHIELD)
+	if (o_ptr->tval == TV_SHIELD && !chaos_artifact_p(o_ptr))
 	{/* CAP_ITEM_BONI */
  #ifndef NEW_SHIELDS_NO_AC
 		if (o_ptr->to_a > 15) o_ptr->to_a = 15;
@@ -878,7 +882,7 @@ static void rd_item(object_type *o_ptr) {
 
 #ifdef TO_AC_CAP_30
 	/* CAP_ITEM_BONI */
-	if (o_ptr->to_a > 30 && !true_artifact_p(o_ptr)) o_ptr->to_a = 30;
+	if (o_ptr->to_a > 30 && !true_artifact_p(o_ptr) && !chaos_artifact_p(o_ptr)) o_ptr->to_a = 30;
 #endif
 
 	/* slightly increased */
@@ -917,7 +921,7 @@ static void rd_item(object_type *o_ptr) {
 	if (is_ammo(o_ptr->tval) && o_ptr->sval == SV_AMMO_MAGIC && !o_ptr->name1) o_ptr->pval = 0;
 
 	/* New cap on +HP for weapons (paranoia: also fix +Speed while at it) */
-	if ((is_melee_weapon(o_ptr->tval) || o_ptr->tval == TV_SHIELD)
+	if (!chaos_artifact_p(o_ptr) && (is_melee_weapon(o_ptr->tval) || o_ptr->tval == TV_SHIELD)
 	    && (o_ptr->name2 || o_ptr->name1 == ART_RANDART)) {
 		artifact_type *a_ptr;
 

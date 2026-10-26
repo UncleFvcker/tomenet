@@ -4002,7 +4002,7 @@ bool create_artifact_aux(int Ind, int item) {
 	    ((item >= 0) ? "Your" : "The"), o_name,
 	    ((o_ptr->number > 1) ? "" : "s"));
 
-	o_ptr->name1 = ART_RANDART;
+	randart_new(o_ptr);
 
 /* NOTE: MAKE SURE THE FOLLOWING CODE IS CONSISTENT WITH make_artifact() IN object2.c! */
 
@@ -4027,7 +4027,7 @@ bool create_artifact_aux(int Ind, int item) {
 
 		/* If the resulting randart is allowed, leave the loop */
 		a_ptr = randart_make(o_ptr);
-		if (((resf & RESF_LIFE) && !p_ptr->current_artifact_nolife) || !(a_ptr->flags1 & TR1_LIFE)) break;
+		if (chaos_artifact_p(o_ptr) || ((resf & RESF_LIFE) && !p_ptr->current_artifact_nolife) || !(a_ptr->flags1 & TR1_LIFE)) break;
 	}
 
 	/* apply magic (which resets owner) and manually restore ownership again afterwards;

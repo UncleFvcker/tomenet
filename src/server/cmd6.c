@@ -6303,11 +6303,11 @@ bool activation_requires_direction(object_type *o_ptr) {
 	}
 
 	/* Art DSMs are handled below */
-	if (o_ptr->tval == TV_DRAG_ARMOR && !o_ptr->name1)
+	if (o_ptr->tval == TV_DRAG_ARMOR && (!o_ptr->name1 || chaos_artifact_p(o_ptr)))
 		return(TRUE);
 
 	/* Artifacts activate by name */
-	if (o_ptr->name1) {
+	if (o_ptr->name1 && !chaos_artifact_p(o_ptr)) {
 		/* This needs to be changed */
 		switch (o_ptr->name1) {
 		case ART_NARTHANC:

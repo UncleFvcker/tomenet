@@ -5159,12 +5159,14 @@ static void quest_goal_check_reward(int pInd, int q_idx) {
 					o_ptr->name2 = q_rew->oname2;
 					o_ptr->name2b = q_rew->oname2b;
 					if (o_ptr->name1) {
-						o_ptr->name1 = ART_RANDART; //hack: disallow true arts!
+						randart_new(o_ptr); //hack: disallow true arts!
 						o_ptr->name2 = o_ptr->name2b = 0;
 					}
 					apply_magic(&wpos, o_ptr, -2, FALSE, FALSE, FALSE, FALSE, resf);
-					o_ptr->pval = q_rew->opval;
-					o_ptr->bpval = q_rew->obpval;
+					if (!chaos_artifact_p(o_ptr)) {
+						o_ptr->pval = q_rew->opval;
+						o_ptr->bpval = q_rew->obpval;
+					}
 					o_ptr->note = quark_add(format("%s", q_name + q_ptr->name));
 					o_ptr->note_utag = 0;
 #ifdef PRE_OWN_DROP_CHOSEN
@@ -6122,12 +6124,14 @@ void questor_drop_specific(int Ind, int q_idx, int questor_idx, struct worldpos 
 			o_ptr->name2 = q_questor->drops_name2;
 			o_ptr->name2b = q_questor->drops_name2b;
 			if (o_ptr->name1) {
-				o_ptr->name1 = ART_RANDART; //hack: disallow true arts!
+				randart_new(o_ptr); //hack: disallow true arts!
 				o_ptr->name2 = o_ptr->name2b = 0;
 			}
 			apply_magic(wpos, o_ptr, -2, FALSE, FALSE, FALSE, FALSE, resf);
-			o_ptr->pval = q_questor->drops_pval;
-			o_ptr->bpval = q_questor->drops_bpval;
+			if (!chaos_artifact_p(o_ptr)) {
+				o_ptr->pval = q_questor->drops_pval;
+				o_ptr->bpval = q_questor->drops_bpval;
+			}
 			o_ptr->note = 0;
 			o_ptr->note_utag = 0;
 #ifdef PRE_OWN_DROP_CHOSEN

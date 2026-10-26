@@ -267,7 +267,7 @@ void sc_wish(int Ind, void *argp) {
 				o_ptr->name2 = 0 - nom;
 				if (tk > 4) o_ptr->name2b = 0 - atoi(token[5]);
 			}
-			else o_ptr->name1 = ART_RANDART;
+			else randart_new(o_ptr);
 
 			/* Piece together a 32-bit random seed */
 			o_ptr->name3 = (u32b)rand_int(0xFFFF) << 16;
@@ -9729,7 +9729,7 @@ void do_slash_cmd(int Ind, char *message, char *message_u) {
 						return;
 					} else {
 						msg_print(Ind, "\377oNot a randart - turning it into one.");
-						o_ptr->name1 = ART_RANDART;
+						randart_new(o_ptr);
 					}
 				}
 
@@ -9846,7 +9846,7 @@ void do_slash_cmd(int Ind, char *message, char *message_u) {
 						return;
 					} else {
 						msg_print(Ind, "\377oNot a randart - turning it into one.");
-						o_ptr->name1 = ART_RANDART;
+						randart_new(o_ptr);
 					}
 				}
 
@@ -13601,7 +13601,7 @@ void do_slash_cmd(int Ind, char *message, char *message_u) {
 						return;
 					} else {
 						msg_print(Ind, "\377oNot a randart - turning it into one.");
-						o_ptr->name1 = ART_RANDART;
+						randart_new(o_ptr);
 					}
 				}
 
@@ -15707,7 +15707,7 @@ extern void wish(int Ind, struct worldpos *wpos, int tval, int sval, int number,
 	if (name1) {
 		if (name1 == ART_RANDART) { /* see defines.h */
 			/* Piece together a 32-bit random seed */
-			o_ptr->name1 = ART_RANDART;
+			randart_new(o_ptr);
 			o_ptr->name3 = (u32b)rand_int(0xFFFF) << 16;
 			o_ptr->name3 += rand_int(0xFFFF);
 		} else {

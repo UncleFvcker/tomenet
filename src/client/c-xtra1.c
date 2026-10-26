@@ -3830,7 +3830,9 @@ void display_player(int hist) {
 
 
 			put_str("Blows/Round:", y_row3, 55);
-			c_put_str(p_ptr->extra_blows ? TERM_L_BLUE : TERM_L_GREEN, format("%d", p_ptr->num_blow), y_row3, 69);
+			c_put_str(p_ptr->extra_blows ? TERM_L_BLUE : TERM_L_GREEN,
+			    p_ptr->melee_blows > 20 && p_ptr->num_blow == 20 ?
+			    format("20(+%d%%)", (p_ptr->melee_blows - 20) * 5) : format("%d", p_ptr->num_blow), y_row3, 69);
 
 			put_str("Shots/Round:", y_row3 + 1, 55);
 			c_put_str(TERM_L_GREEN, format("%d", p_ptr->num_fire), y_row3 + 1, 69);

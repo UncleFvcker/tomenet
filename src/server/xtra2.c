@@ -8162,7 +8162,7 @@ bool monster_death(int Ind, int m_idx) {
 			invcopy(qq_ptr, lookup_kind(TV_RING, SV_RING_SPECIAL));
 			qq_ptr->number = 1;
 
-			qq_ptr->name1 = ART_RANDART;
+			randart_new(qq_ptr);
 
 			/* Piece together a 32-bit random seed */
 			qq_ptr->name3 = (u32b)rand_int(0xFFFF) << 16;
@@ -8310,7 +8310,7 @@ bool monster_death(int Ind, int m_idx) {
 			invcopy(qq_ptr, k_idx);
 
 			/* Megahack -- specify the ego */
-			qq_ptr->name1 = ART_RANDART;
+			randart_new(qq_ptr);
 
 			do { /* Try to create a heavily cursed randart.. */
 				/* Piece together a 32-bit random seed */
@@ -8323,6 +8323,7 @@ bool monster_death(int Ind, int m_idx) {
 				if (!tries) break;
 
 				a_ptr = randart_make(qq_ptr);
+				if (chaos_artifact_p(qq_ptr)) break;
 				if (!(a_ptr->flags3 & TR3_HEAVY_CURSE)) continue;
 				if (artifact_power(a_ptr) < -30) continue;
 				break;
@@ -8451,21 +8452,26 @@ bool monster_death(int Ind, int m_idx) {
 			    skydsm,elec rod,elec ring,elec/mana rune,mage staff,tome of wind
 			*/
 
+			randart_new(qq_ptr);
+			byte reward_version = qq_ptr->randart_version;
 			while (tries--) {
 				object_wipe(qq_ptr);
 				invcopy(qq_ptr, lookup_kind(TV_RING, SV_RING_ELEC));
 				qq_ptr->number = 1;
+				qq_ptr->name1 = ART_RANDART;
+				qq_ptr->randart_version = reward_version;
+				qq_ptr->name3 = (u32b)rand_int(0xFFFF) << 16 | rand_int(0xFFFF);
 				qq_ptr->note = local_quark;
 				qq_ptr->note_utag = strlen(quark_str(local_quark));
 				apply_magic(wpos, qq_ptr, 150, TRUE, TRUE, TRUE, TRUE, RESF_FORCERANDART | RESF_NOTRUEART);
 				/* hack - ensure non-cursed item: */
-				if (qq_ptr->to_a > 0) break;
+				if (chaos_artifact_p(qq_ptr) || qq_ptr->to_a > 0) break;
 			}
 #if 1
 			tries = 3000;
 			object_copy(&forge_bak, &forge);
 			object_copy(&forge_fallback, &forge);
-			while (qq_ptr->pval < 6 && tries--) {
+			while (!chaos_artifact_p(qq_ptr) && qq_ptr->pval < 6 && tries--) {
 				object_copy(&forge, &forge_bak);
 				/* Piece together a 32-bit random seed */
 				qq_ptr->name3 = (u32b)rand_int(0xFFFF) << 16;
@@ -8488,7 +8494,7 @@ bool monster_death(int Ind, int m_idx) {
 				/* keep best result for possible fallback */
 				if (qq_ptr->pval > forge_fallback.pval) object_copy(&forge_fallback, qq_ptr);
 			}
-			if (qq_ptr->pval < 6) object_copy(qq_ptr, &forge_fallback);
+			if (!chaos_artifact_p(qq_ptr) && qq_ptr->pval < 6) object_copy(qq_ptr, &forge_fallback);
 #endif
 			qq_ptr->timeout_magic = 0;
 			drop_near(TRUE, 0, qq_ptr, -1, wpos, y, x);
@@ -8528,11 +8534,14 @@ bool monster_death(int Ind, int m_idx) {
 			drop_near(TRUE, 0, qq_ptr, -1, wpos, y, x);
 
 			tries = 500;
+			randart_new(qq_ptr);
+			reward_version = qq_ptr->randart_version;
 			while (tries) {
 				object_wipe(qq_ptr);
 				invcopy(qq_ptr, lookup_kind(TV_DRAG_ARMOR, SV_DRAGON_SKY));
 				qq_ptr->number = 1;
 				qq_ptr->name1 = ART_RANDART;
+				qq_ptr->randart_version = reward_version;
 
 				/* Piece together a 32-bit random seed */
 				qq_ptr->name3 = (u32b)rand_int(0xFFFF) << 16;
@@ -8540,6 +8549,7 @@ bool monster_death(int Ind, int m_idx) {
 				apply_magic(wpos, qq_ptr, 150, TRUE, TRUE, TRUE, TRUE, RESF_FORCERANDART | RESF_NOTRUEART | RESF_LIFE);
 
 				a_ptr = randart_make(qq_ptr);
+				if (chaos_artifact_p(qq_ptr)) break;
 				if (artifact_power(a_ptr) >= 105 + 5 && /* at least +1 new mod gained; and +extra bonus boost */
 				    qq_ptr->to_a > 0 && qq_ptr->to_h >= k_info[qq_ptr->k_idx].to_h && /* no lingering cursed effects */
 				    !(a_ptr->flags3 & (TR3_AGGRAVATE | TR3_NO_MAGIC)))

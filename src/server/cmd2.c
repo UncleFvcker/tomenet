@@ -6631,7 +6631,7 @@ int breakage_chance(object_type *o_ptr) {
 	case TV_ARROW:
 		if (o_ptr->sval == SV_AMMO_MAGIC && !cursed_p(o_ptr)) return(0);
 		else if (o_ptr->name2 == EGO_ETHEREAL || o_ptr->name2b == EGO_ETHEREAL) return(10);
-		else if (o_ptr->pval) return(100); /* exploding (non-magical) ammo */
+		else if (ammo_explosive_p(o_ptr)) return(100); /* exploding (non-magical) ammo */
 		else if (o_ptr->tval == TV_SHOT) return(10);
 		else if (o_ptr->tval == TV_BOLT) return(15);
 		return(20); /* TV_ARROW */
@@ -6725,6 +6725,7 @@ static void do_arrow_brand_effect(int Ind, int y, int x) {
 /* Exploding arrow */
 //static void do_arrow_explode(int Ind, object_type *o_ptr, int y, int x)
 void do_arrow_explode(int Ind, object_type *o_ptr, worldpos *wpos, int y, int x, int might) {
+	if (!ammo_explosive_p(o_ptr)) return;
 	//player_type *p_ptr = Players[Ind];
 	int rad = 0;
 	//int dam = (damroll(o_ptr->dd, o_ptr->ds) + o_ptr->to_d) * 2 * ((might / 3) + 1);
@@ -7828,7 +7829,7 @@ void do_cmd_fire(int Ind, int dir) {
 									do_arrow_brand_effect(Ind, y, x);
 
 								/* Ammo pval takes precedence - Kurzel */
-								if (!boomerang && !magic && o_ptr->pval)
+								if (!boomerang && !magic && ammo_explosive_p(o_ptr))
 									do_arrow_explode(Ind, o_ptr, wpos, y, x, tmul);
 								else if (p_ptr->nimbus) do_nimbus(Ind, y, x);
 
@@ -7899,7 +7900,7 @@ void do_cmd_fire(int Ind, int dir) {
 							hit_body = 1;
 						}
 						aimed_ricochet = FALSE; /* In any case, ricocheting off a reflector is random and not aimable anymore even with skillz */
-						if (!boomerang && !magic && o_ptr->pval) do_arrow_explode(Ind, o_ptr, wpos, y, x, tmul);
+						if (!boomerang && !magic && ammo_explosive_p(o_ptr)) do_arrow_explode(Ind, o_ptr, wpos, y, x, tmul);
 						break;
 					}
 
@@ -7917,7 +7918,7 @@ void do_cmd_fire(int Ind, int dir) {
 							msg_print(Ind, hit_desc);
 						}
 						hit_body = 1;
-						if (!boomerang && !magic && o_ptr->pval) do_arrow_explode(Ind, o_ptr, wpos, y, x, tmul);
+						if (!boomerang && !magic && ammo_explosive_p(o_ptr)) do_arrow_explode(Ind, o_ptr, wpos, y, x, tmul);
 						break;
 					}
 #endif
@@ -8151,7 +8152,7 @@ void do_cmd_fire(int Ind, int dir) {
 						do_arrow_brand_effect(Ind, y, x);
 
 					/* Ammo pval takes precedence - Kurzel */
-					if (!boomerang && !magic && o_ptr->pval)
+					if (!boomerang && !magic && ammo_explosive_p(o_ptr))
 						do_arrow_explode(Ind, o_ptr, wpos, y, x, tmul);
 					else if (p_ptr->nimbus) do_nimbus(Ind, y, x);
 
@@ -8189,7 +8190,7 @@ void do_cmd_fire(int Ind, int dir) {
 #endif
 			/* server crashed here when ny was 66, dir was 10 but then became 3, odd stuff.. */
 			if (in_bounds_array(ny, nx) &&
-			    !boomerang && !magic && o_ptr->pval) {
+			    !boomerang && !magic && ammo_explosive_p(o_ptr)) {
 				if (!cave_contact(zcave, ny, nx)) /* Stopped by walls/doors ?*/
 #ifndef PY_FIRE_ON_WALL
 					do_arrow_explode(Ind, o_ptr, wpos, y, x, tmul);
@@ -8202,7 +8203,7 @@ void do_cmd_fire(int Ind, int dir) {
 			}
 #ifdef DOUBLE_LOS_SAFETY
 		} else if (!target_ok /* fired 'at oneself'? */
-		    && !boomerang && !magic && o_ptr->pval) {
+		    && !boomerang && !magic && ammo_explosive_p(o_ptr)) {
 			do_arrow_explode(Ind, o_ptr, wpos, y, x, tmul);
 		}
 #endif
@@ -8222,7 +8223,7 @@ void do_cmd_fire(int Ind, int dir) {
 		}
 
 		/* Break ammo? (In case of boomerangs this turns into a drop. Chance at the time of writing: 1 in 5000.) */
-		if (((o_ptr->pval != 0 && !boomerang) || rand_int(10000) < j) /* exploding ammo always breaks */
+		if (((ammo_explosive_p(o_ptr) && !boomerang) || rand_int(10000) < j) /* exploding ammo always breaks */
 		    && !magic && !ethereal && !artifact_p(o_ptr)
 		    && !(boomerang && (o_ptr->name2 || o_ptr->name2b))) { /* <- 2024 for rune sigils - ego-boomerangs don't drop to the floor either, like arts */
 			/* Remember as broken */

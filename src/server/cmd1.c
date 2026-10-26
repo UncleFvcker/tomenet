@@ -3291,6 +3291,13 @@ void hit_trap(int Ind) {
  */
 /* TODO: q_ptr/p_ptr->name should be replaced by strings made by player_desc */
 //note: we assume that p_ptr->num_blow isn't 0 (div/0)
+int melee_overflow_damage(player_type *p_ptr, int damage) {
+	s64b scaled;
+	if (damage <= 0 || p_ptr->melee_blows <= 20 || is_admin(p_ptr)) return(damage);
+	scaled = (s64b)damage * p_ptr->melee_blows / 20;
+	return(scaled > 2147483647L ? 2147483647L : scaled);
+}
+
 static void py_attack_player(int Ind, int y, int x, byte old) {
 	player_type *p_ptr = Players[Ind];
 	int num = 0, bonus, chance, slot;
@@ -3616,6 +3623,7 @@ static void py_attack_player(int Ind, int y, int x, byte old) {
 
 		f1 = f2 = f3 = f4 = f5 = esp = 0x0;
 		object_flags(o_ptr, &f1, &f2, &f3, &f4, &f5, &f6, &esp);
+		f5 |= p_ptr->melee_flags5;
 		chaos_effect = 0; // we need this methinks..?
 
 		if ((f4 & TR4_NEVER_BLOW)) {
@@ -4127,6 +4135,7 @@ static void py_attack_player(int Ind, int y, int x, byte old) {
 			}
 
 			/* factor in AC */
+			k = melee_overflow_damage(p_ptr, k);
 			if (!pierced
 #ifdef PVP_BACKSTAB_PIERCES
 			    && !backstab
@@ -4938,6 +4947,7 @@ static void py_attack_mon(int Ind, int y, int x, byte old) {
 
 		object_flags(o_ptr, &f1, &f2, &f3, &f4, &f5, &f6, &esp);
 		chaos_effect = 0; // we need this methinks..?
+		f5 |= p_ptr->melee_flags5;
 
 		if ((f4 & TR4_NEVER_BLOW)) {
 			msg_print(Ind, "You can't attack with that weapon.");
@@ -5484,6 +5494,7 @@ static void py_attack_mon(int Ind, int y, int x, byte old) {
 #endif
 			}
 
+			k = melee_overflow_damage(p_ptr, k);
 			if (m_ptr->r_idx == RI_MIRROR) k = (k * MIRROR_REDUCE_DAM_TAKEN_MELEE + 99) / 100;
 
 			/* for admins: kill a target in one hit */

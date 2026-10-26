@@ -38,11 +38,26 @@ void test_catalog_packets(void) {
         288, TERM_TRUE_ARTIFACT, 1, 1, 0, "[Stored] Gold artifact", TV_BOOTS, 1, 0, "");
     Receive_store(); Sockbuf_clear(&rbuf);
 }
+void test_overflow_packets(void) {
+    server_version.build = 3;
+    Packet_printf(&rbuf, "%c", PKT_SKILLS);
+    for (int i = 0; i < 12; i++) Packet_printf(&rbuf, "%hd", i == 8 ? 20 : 0);
+    assert(Receive_skills() <= 0); /* Wait for the complete raw-blows field. */
+    Packet_printf(&rbuf, "%hd", 123);
+    assert(Receive_skills() > 0);
+    assert(p_ptr->num_blow == 20 && p_ptr->melee_blows == 123); Sockbuf_clear(&rbuf);
+    server_version.build = 2;
+    Packet_printf(&rbuf, "%c", PKT_SKILLS);
+    for (int i = 0; i < 12; i++) Packet_printf(&rbuf, "%hd", i == 8 ? 6 : 0);
+    assert(Receive_skills() > 0);
+    assert(p_ptr->num_blow == 6 && p_ptr->melee_blows == 6); Sockbuf_clear(&rbuf);
+    server_version.build = 3;
+}
 '''
 }.items():
     source = output.with_name(name + "-artifact-test.c")
     obj = source.with_suffix(".o")
-    source.write_text(f'#include "{(build / "client" / (name + ".c")).as_posix()}"\n' + shim)
+    source.write_text(f'#include <assert.h>\n#include "{(build / "client" / (name + ".c")).as_posix()}"\n' + shim)
     subprocess.run(["gcc", *flags, "-c", str(source), "-o", str(obj)], cwd=build, check=True)
     objects = [str(obj) if entry == f"client/{name}.o" else entry for entry in objects]
 subprocess.run(["gcc", *flags, str(root / "tests/client_artifacts.c"), *objects,

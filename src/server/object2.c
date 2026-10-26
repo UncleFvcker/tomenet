@@ -2576,7 +2576,7 @@ s64b object_value_real(int Ind, object_type *o_ptr) {
 			value += i * 5000L;
 
 		/* Special attack (exploding arrow) */
-		if (o_ptr->pval != 0) {
+		if (ammo_explosive_p(o_ptr)) {
 			if (o_ptr->name1 != ART_RANDART) value *= 8;
 			else value *= 2;
 		}
@@ -3059,6 +3059,7 @@ s64b artifact_value_real(int Ind, object_type *o_ptr) {
 			a_ptr = randart_make(o_ptr);
 			if (a_ptr->flags3 & TR3_AUTO_CURSE) return(0L);
 			else {
+				if (a_ptr->legacy_aggravation) f3 |= TR3_AGGRAVATE; /* Preserve the old sale value only. */
 				/* start with base item kind price (k_info) */
 				value = object_value_base(0, o_ptr);
 				/* randarts get a base value boost */
@@ -3661,6 +3662,9 @@ s64b object_value(int Ind, object_type *o_ptr) {
    Ind can be 0, and for stores it must be -1!
    tolerance only checks 0x1 and 0x2 here, which is ammo-enchant-merging and trapkit-enchant-merging, so it should just be 0x0 for stores. */
 bool object_similar_tval(int Ind, object_type *o_ptr, object_type *j_ptr, s16b tolerance, bool unknown) {
+	if (o_ptr->name1 == ART_RANDART && j_ptr->name1 == ART_RANDART &&
+	    (o_ptr->randart_version != j_ptr->randart_version ||
+	    (chaos_artifact_p(o_ptr) && o_ptr->name3 != j_ptr->name3))) return(FALSE);
 	player_type *p_ptr;
 	bool stack_allow_devices, stack_allow_items;
 
@@ -4851,7 +4855,7 @@ static bool make_artifact(struct worldpos *wpos, object_type *o_ptr, u64b resf) 
 #endif
 
 		/* We turn this item into a randart! */
-		o_ptr->name1 = ART_RANDART;
+		randart_new(o_ptr);
 
 /* NOTE: MAKE SURE FOLLOWING CODE IS CONSISTENT WITH create_artifact_aux() IN spells2.c! */
 
@@ -4874,7 +4878,7 @@ static bool make_artifact(struct worldpos *wpos, object_type *o_ptr, u64b resf) 
 
 			/* Check if we can break the loop (artifact is allowed) */
 			a_ptr = randart_make(o_ptr);
-			if ((resf & RESF_LIFE) || !(a_ptr->flags1 & TR1_LIFE)) break;
+			if (chaos_artifact_p(o_ptr) || (resf & RESF_LIFE) || !(a_ptr->flags1 & TR1_LIFE)) break;
 		}
 
 		/* after too many tries, in theory allow non-winner to find a +LIFE randart.
@@ -6593,7 +6597,7 @@ void apply_magic(struct worldpos *wpos, object_type *o_ptr, int lev, bool okay, 
 	}
 
 	/* Roll for artifacts if allowed */
-	for (i = 0; i < rolls; i++) {
+	for (i = 0; i < rolls && !o_ptr->name1; i++) {
 		/* Roll for an artifact -
 		   on original object, since rings/amulets might already have gotten
 		   an ego power from a_m_aux_3() above. */
@@ -6673,7 +6677,8 @@ void apply_magic(struct worldpos *wpos, object_type *o_ptr, int lev, bool okay, 
 		if (!a_ptr->cost) o_ptr->ident |= ID_BROKEN;
 
 		/* Hack -- extract the "cursed" flag */
-		if (a_ptr->flags3 & TR3_CURSED) o_ptr->ident |= ID_CURSED;
+		if ((a_ptr->flags3 & TR3_CURSED) || (chaos_artifact_p(o_ptr) &&
+		    (a_ptr->flags3 & (TR3_HEAVY_CURSE | TR3_PERMA_CURSE)))) o_ptr->ident |= ID_CURSED;
 
 		/* Done */
 		return;
@@ -14046,7 +14051,7 @@ static void hack_particular_item_aux(object_type *o_ptr, struct worldpos xwpos) 
 	object_wipe(o_ptr);
 	invcopy(o_ptr, lookup_kind(TV_DRAG_ARMOR, SV_DRAGON_SKY));
 	o_ptr->number = 1;
-	o_ptr->name1 = ART_RANDART;
+	randart_new(o_ptr);
 	tries = 500;
 	while (tries) {
 		/* Piece together a 32-bit random seed */

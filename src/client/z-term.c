@@ -781,6 +781,7 @@ static byte anim2static(byte attr) {
 	switch (attr) {
 	case TERM_TRUE_ARTIFACT: return(TERM_YELLOW);
 	case TERM_RANDOM_ARTIFACT: return(TERM_VIOLET);
+	case TERM_CHAOS_ARTIFACT: return(TERM_L_BLUE);
 	case TERM_BNW:
 	case TERM_BNWM:
 	case TERM_BNWSR:
@@ -1139,6 +1140,8 @@ byte flick_colour(byte attr) {
 		return(anim2static(attr));
 #endif
 	}
+	if (attr == TERM_CHAOS_ARTIFACT)
+		return(rand_int(5) ? TERM_L_BLUE : TERM_BLUE);
 	if (attr == TERM_TRUE_ARTIFACT)
 		return(rand_int(5) ? TERM_YELLOW : TERM_L_UMBER);
 	if (attr == TERM_RANDOM_ARTIFACT)

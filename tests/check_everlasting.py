@@ -11,6 +11,7 @@ Checks level-zero item sharing and the remaining level/mode restrictions.
 Checks physical runes on all slots and artifacts, without artifact-generation PVAL caps.
 Checks book protection, boss rematches, free NPC stock refresh and Highlander elimination.
 Checks cursed equipment side effects, eligibility, re-equipping and item save/load.
+Checks Chaos Artifacts, fixed legacy rolls, old item records and real melee overflow.
 """
 from pathlib import Path
 import re
@@ -48,7 +49,7 @@ for obj in objects:
 subprocess.run(["make", "-f", "makefile.win", "-j4", "CFLAGS=" + " ".join(FLAGS),
                 "LUACFLAGS=" + " ".join(FLAGS), *objects], cwd=SRC, check=True)
 test_sources = [ROOT / "tests" / name for name in
-                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c", "item_sharing.c", "physical_runes.c", "monster_rules.c", "boss_store.c", "cursed_inversion.c", "artifact_vault.c")]
+                ("everlasting.c", "skill_potion.c", "skill_respec.c", "item_protection.c", "item_sharing.c", "physical_runes.c", "monster_rules.c", "boss_store.c", "cursed_inversion.c", "artifact_vault.c", "chaos_artifacts.c")]
 wrappers = re.findall(r"__wrap_(\w+)\(", "\n".join(path.read_text() for path in test_sources))
 output_root = ROOT / ".github/workspace"
 output_root.mkdir(parents=True, exist_ok=True)
@@ -76,6 +77,10 @@ with tempfile.TemporaryDirectory(prefix="everlasting-", dir=output_root) as temp
     extra_objects = []
     for name, shim in {
         "store": "",
+        "cmd1": '''
+void test_attack_monster(int Ind) { py_attack_mon(Ind, 0, 1, FALSE); }
+void test_attack_player(int Ind) { py_attack_player(Ind, 0, 1, FALSE); }
+''',
         "melee2": '''
 void test_cooldown_start(monster_type *m, int chance) { monster_spell_cooldown_start(m, chance); }
 void test_cooldown_charge(monster_type *m, int energy) { monster_spell_cooldown_charge(m, energy); }
@@ -112,17 +117,19 @@ void test_write_monsters(FILE *file, monster_type *monsters, int count, bool leg
 bool test_read_vault_house(FILE *file, int slot) {
     static byte buffer[MAX_BUF_SIZE]; u32b marker;
     fff = file; fff_buf = buffer; fff_buf_pos = MAX_BUF_SIZE; xor_byte = 0; v_check = x_check = 0;
-    sf_major = ssf_major = 4; sf_minor = ssf_minor = 9; sf_patch = ssf_patch = 26;
+    sf_major = ssf_major = 4; sf_minor = ssf_minor = 9; sf_patch = ssf_patch = SF_VERSION_PATCH;
     rd_house(slot); rd_u32b(&marker); fff = NULL; fff_buf = NULL;
     return marker == 0x12345678;
 }
-bool test_read_cursed_item(FILE *file, object_type *item) {
+static bool test_read_item_version(FILE *file, object_type *item, byte version) {
     static byte buffer[MAX_BUF_SIZE]; u32b marker;
     fff = file; fff_buf = buffer; fff_buf_pos = MAX_BUF_SIZE; xor_byte = 0; v_check = x_check = 0;
-    sf_major = 4; sf_minor = 9; sf_patch = 26;
+    sf_major = 4; sf_minor = 9; sf_patch = version;
     rd_item(item); rd_u32b(&marker); fff = NULL; fff_buf = NULL;
     return marker == 0x12345678;
 }
+bool test_read_cursed_item(FILE *file, object_type *item) { return test_read_item_version(file, item, SF_VERSION_PATCH); }
+bool test_read_legacy_item(FILE *file, object_type *item) { return test_read_item_version(file, item, 26); }
 bool test_read_monsters(FILE *file, monster_type *monsters, int capacity, bool legacy) {
     static byte buffer[MAX_BUF_SIZE]; u16b count; u32b marker;
     fff = file; fff_buf = buffer; fff_buf_pos = MAX_BUF_SIZE; xor_byte = 0; v_check = x_check = 0;
@@ -157,7 +164,7 @@ bool test_read_monsters(FILE *file, monster_type *monsters, int capacity, bool l
         case_flags = FLAGS.copy()
         case_objects = [obj for obj in objects if obj not in
                         ("server/main.o", "server/dungeon.o", "server/spells1.o",
-                         "server/melee2.o", "server/monster2.o", "server/save.o", "server/load2.o", "server/store.o")]
+                          "server/melee2.o", "server/monster2.o", "server/save.o", "server/load2.o", "server/store.o", "server/cmd1.o")]
         case_objects.extend([str(dungeon_object), str(spells_object), *extra_objects])
         if not instant_res:
             header = temp / "without-instant-res.h"

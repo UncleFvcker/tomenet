@@ -43,7 +43,7 @@
 #define VERSION_PATCH		6
 #define VERSION_EXTRA		0
 #define VERSION_BRANCH		0
-#define VERSION_BUILD		2
+#define VERSION_BUILD		3
 
 /* MAJOR/MINOR/PATCH version that counts as 'latest' (should be 0-15).
    If a player is online with a version > this && <= current version (VERSION_)
@@ -105,7 +105,7 @@
 /* For savefile purpose only */
 #define SF_VERSION_MAJOR	4
 #define SF_VERSION_MINOR	9
-#define SF_VERSION_PATCH	26
+#define SF_VERSION_PATCH	27
 #define SF_VERSION_EXTRA	0 /* <- not used in version checks! */
 
 /* For quests savefile purpose only */
@@ -3190,6 +3190,12 @@
 
 /* Randarts */
 #define ART_RANDART		999
+
+#define RANDART_LEGACY 0
+#define RANDART_NORMAL 1
+#define RANDART_CHAOS 2
+#define chaos_artifact_p(T) ((T)->name1 == ART_RANDART && (T)->randart_version == RANDART_CHAOS)
+#define ammo_explosive_p(T) (is_ammo((T)->tval) && (T)->pval != 0 && !chaos_artifact_p(T))
 
 /* Lites */
 #define ART_GALADRIEL		1
@@ -8400,6 +8406,7 @@ extern int PlayerUID;
 #define TERM_HALF	31	/* only the brighter colours */
 #define TERM_TRUE_ARTIFACT 96
 #define TERM_RANDOM_ARTIFACT 97
+#define TERM_CHAOS_ARTIFACT 98
 
 #ifdef EXTENDED_TERM_COLOURS
  #define TERM_OLD_BNW	0x20	/* 32: black & white MASK, for admin wizards */

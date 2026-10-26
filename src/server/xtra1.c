@@ -3449,6 +3449,7 @@ void calc_boni(int Ind) {
 	p_ptr->vampiric_melee = 0;
 	p_ptr->vampiric_ranged = 0;
 	p_ptr->slay = p_ptr->slay_melee = p_ptr->slay_equip = 0x0;
+	p_ptr->melee_flags5 = 0;
 
 	/* nastiness */
 	p_ptr->ty_curse = FALSE;
@@ -4743,7 +4744,7 @@ void calc_boni(int Ind) {
 		else extra_weapon_parry += (o_ptr->to_a * 10 + WEAPONS_NO_AC - 10) / WEAPONS_NO_AC;
  #endif
 #else
-		if (o_ptr->tval != TV_SHIELD)
+		if (o_ptr->tval != TV_SHIELD || chaos_artifact_p(o_ptr))
  #ifndef WEAPONS_NO_AC
 			p_ptr->to_a += o_ptr->to_a;
  #else
@@ -4765,7 +4766,7 @@ void calc_boni(int Ind) {
 			//note: ATM we always tell the player his true parry chance, even though we'd need a 'dis_to_parry' here for unidentified weapons that give hidden +parry chance!
  #endif
 #else
-			if (o_ptr->tval != TV_SHIELD)
+			if (o_ptr->tval != TV_SHIELD || chaos_artifact_p(o_ptr))
  #ifndef WEAPONS_NO_AC
 				p_ptr->dis_to_a += o_ptr->to_a;
  #else
@@ -4788,8 +4789,13 @@ void calc_boni(int Ind) {
 
 
 		/* Brands/slays */
+		if (chaos_artifact_p(o_ptr) && i != INVEN_WIELD &&
+		    !(i == INVEN_ARM && o_ptr->tval != TV_SHIELD)) {
+			p_ptr->melee_flags5 |= f5 & (TR5_VORPAL | TR5_CHAOTIC);
+			if (f3 & TR3_BLESSED) p_ptr->blessed_weapon = TRUE;
+		}
 		if (i == INVEN_WIELD || (i == INVEN_ARM && p_ptr->inventory[INVEN_ARM].tval != TV_SHIELD /* dual-wielders */ )
-		    || i == INVEN_AMMO || i == INVEN_BOW || i == INVEN_TOOL) {
+		    || (!chaos_artifact_p(o_ptr) && (i == INVEN_AMMO || i == INVEN_BOW || i == INVEN_TOOL))) {
 			if (f1 & TR1_SLAY_ANIMAL) csheet_boni[i-INVEN_WIELD].cb[7] |= CB8_SANIM;
 			if (f1 & TR1_SLAY_EVIL) csheet_boni[i-INVEN_WIELD].cb[9] |= CB10_SEVIL;
 			if (f1 & TR1_SLAY_UNDEAD) csheet_boni[i-INVEN_WIELD].cb[9] |= CB10_SUNDD;
@@ -4842,9 +4848,9 @@ void calc_boni(int Ind) {
 		}
 		if (i == INVEN_AMMO || i == INVEN_BOW) {
 			if (f1 & TR1_VAMPIRIC) { p_ptr->vampiric_ranged = WEAPON_VAMPIRIC_CHANCE_RANGED; csheet_boni[i-INVEN_WIELD].cb[6] |= CB7_RVAMP; }
-			continue;
+			if (!chaos_artifact_p(o_ptr)) continue;
 		}
-		if (i == INVEN_TOOL) continue;
+		if (i == INVEN_TOOL && !chaos_artifact_p(o_ptr)) continue;
 
 
 		if (f1 & TR1_BLOWS) { p_ptr->extra_blows += pval; csheet_boni[i-INVEN_WIELD].blow += pval; }
@@ -4876,6 +4882,7 @@ void calc_boni(int Ind) {
 		}
 
 		/* Apply the boni to hit/damage */
+		if (i == INVEN_AMMO || i == INVEN_BOW) continue; /* Their own attacks already include these boni. */
 		p_ptr->to_h += o_ptr->to_h;
 		p_ptr->to_d += o_ptr->to_d;
 
@@ -7165,9 +7172,10 @@ void calc_boni(int Ind) {
 
 	/* Limit blows per round (just paranoia^^) */
 	if (p_ptr->num_blow < 0) p_ptr->num_blow = 0;
-	if ((p_ptr->num_blow > 20) && !is_admin(p_ptr)) p_ptr->num_blow = 20;
 	/* ghost-dive limit to not destroy the real gameplay */
 	if (p_ptr->ghost && !is_admin(p_ptr)) p_ptr->num_blow = (p_ptr->lev + 15) / 16;
+	p_ptr->melee_blows = p_ptr->num_blow;
+	if (p_ptr->num_blow > 20 && !is_admin(p_ptr)) p_ptr->num_blow = 20;
 
 	/* Gaining anti_tele will cancel all active Word-of-Recall */
 #ifdef ANTI_TELE_CHEEZE
@@ -7664,6 +7672,7 @@ void calc_boni(int Ind) {
 
 	/* hack: remember temporary +EA to colourise 'BpR' display accordingly */
 	p_ptr->extra_blows = extra_blows_tmp;
+	if (!p_ptr->num_blow) p_ptr->melee_blows = 0;
 }
 
 /* Just calc and return temporary _player-specific_ hit/dam boni (not those of the actual object itself)

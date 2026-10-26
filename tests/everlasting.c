@@ -160,6 +160,7 @@ void check_monster_rules(void);
 void check_boss_store(void);
 void check_cursed_inversion(void);
 void check_artifact_vault(void);
+void check_chaos_artifacts(void);
 void test_do_recall(int Ind);
 
 static void check_world_recall(void) {
@@ -337,5 +338,6 @@ int main(void) {
 		assert(recalls == 0);
 	}
 	puts("Everlasting death and resurrection checks passed.");
+	check_chaos_artifacts();
 	return 0;
 }

@@ -297,6 +297,7 @@ struct artifact_type {
 #endif	/* 0 */
 
 	bool known;		/* Is this artifact already IDed? */
+	bool legacy_aggravation;	/* Removed power compensation; retain legacy rating and price. */
 
 	s32b carrier;		/* Current holder (not necessarily same as o_ptr->owner), just to keep track */
 	s32b timeout;		/* anti-hoarding artifact reset timer (-1 = permanent) */
@@ -736,6 +737,7 @@ struct object_type {
 	u16b name2;			/* Ego-Item type, if any */
 	u16b name2b;			/* 2e Ego-Item type, if any */
 	u32b name3;			/* Randart seed, if any (now it's common with ego-items -Jir-) */
+	byte randart_version;		/* Legacy, current ordinary, or Chaos Artifact generator. */
 	u16b name4;			/* Index of randart name in file 'randarts.txt', solely for fun set bonus - C. Blue */
 	byte attr;			/* colour in inventory (for client) */
 
@@ -3994,6 +3996,7 @@ struct player_type {
 #endif
 
 	s16b num_blow;			/* Number of blows */
+	s16b melee_blows;		/* Uncapped legal blows; runtime-only overflow damage. */
 	s16b num_fire;			/* Number of shots */
 	s16b num_spell;			/* Number of spells */
 
@@ -4106,6 +4109,7 @@ struct player_type {
 	int vampiric_ranged;		/* shots have vampiric effects? */
 	int vamp_fed_midx;		/* monster we fed from */
 	u32b slay, slay_melee, slay_equip;	/* intrinsic slay flags gained by skills, traits (slay/slay_melee) and by non-weapon items (slay_equip) */
+	u32b melee_flags5;		/* Weapon effects supplied by equipped non-weapon Chaos Artifacts. */
 
 	bool ty_curse;			/* revived these two, in different forms */
 	bool dg_curse;

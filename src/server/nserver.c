@@ -6815,6 +6815,7 @@ int Send_history(int Ind, int line, cptr hist) {
  * TODO: Don't transmit sval for flavoured items if player is unaware of the flavour! Instead, transmit 255.
  */
 static byte item_attr_for_client(int Ind, byte attr) {
+	if (attr == TERM_CHAOS_ARTIFACT && is_older_than(&Players[Ind]->version, 4, 9, 6, 0, 0, 3)) return(TERM_L_BLUE);
 	if (!is_atleast(&Players[Ind]->version, 4, 9, 6, 0, 0, 2)) {
 		if (attr == TERM_TRUE_ARTIFACT) return(TERM_YELLOW);
 		if (attr == TERM_RANDOM_ARTIFACT) return(TERM_VIOLET);
@@ -10888,10 +10889,12 @@ int Send_skills(int Ind) {
 		connp2 = Conn[p_ptr2->conn];
 		Packet_printf(&connp2->c, "%c", PKT_SKILLS);
 		for (i = 0; i < 12; i++) Packet_printf(&connp2->c, "%hd", skills[i]);
+		if (is_atleast(&p_ptr2->version, 4, 9, 6, 0, 0, 3)) Packet_printf(&connp2->c, "%hd", p_ptr->melee_blows);
 	}
 
 	Packet_printf(&connp->c, "%c", PKT_SKILLS);
 	for (i = 0; i < 12; i++) Packet_printf(&connp->c, "%hd", skills[i]);
+	if (is_atleast(&p_ptr->version, 4, 9, 6, 0, 0, 3)) Packet_printf(&connp->c, "%hd", p_ptr->melee_blows);
 
 	return(1);
 }

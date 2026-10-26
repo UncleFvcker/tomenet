@@ -2576,9 +2576,10 @@ void object_desc(int Ind, char *buf, object_type *o_ptr, int pref, int mode) {
 	t = buf;
 	if (Ind && known && artifact_p(o_ptr) && !(mode & (256 | 512)) &&
 	    is_atleast(&p_ptr->version, 4, 9, 6, 0, 0, 2)) {
-		t = object_desc_str(t, true_artifact_p(o_ptr) ? "[TA] " : "[RA] ");
+		t = object_desc_str(t, true_artifact_p(o_ptr) ? "[TA] " : chaos_artifact_p(o_ptr) ? "[CA] " : "[RA] ");
 		if (use_color && can_use_admin(Ind, o_ptr) && !check_guard_inscription(o_ptr->note, 'U'))
-			t = object_desc_str(t, true_artifact_p(o_ptr) ? "\377:" : "\377;");
+			t = object_desc_str(t, true_artifact_p(o_ptr) ? "\377:" : chaos_artifact_p(o_ptr) ?
+			    (is_atleast(&p_ptr->version, 4, 9, 6, 0, 0, 3) ? "\377<" : "\377B") : "\377;");
 	}
 
 	/* hack: questors have an arbitrary name */
@@ -3134,7 +3135,7 @@ void object_desc(int Ind, char *buf, object_type *o_ptr, int pref, int mode) {
 	case TV_BOLT:
 	case TV_ARROW:
 		/* Exploding arrow? */
-		if (o_ptr->pval != 0 && known) t = object_desc_str(t, " (exploding)");
+		if (ammo_explosive_p(o_ptr) && known) t = object_desc_str(t, " (exploding)");
 		/* No break, we want to continue the description */
 		__attribute__ ((fallthrough));
 
@@ -4206,6 +4207,7 @@ static void output_dam(int Ind, FILE *fff, object_type *o_ptr, int mult, int mul
 	critical_damage = melee_crit_dam(dam, crit_flat_bonus, allow_skill_crit ? crit_die_size : 0);
 	// expected damage factoring in crits
 	dam = (((long) critical_chance) * critical_damage + (5000L - critical_chance) * dam) / 5000;
+	dam = melee_overflow_damage(p_ptr, dam);
 
 	if (dam > 0) {
 		if (dam % 10) fprintf(fff, "    %d.%d", dam / 10, dam % 10);
@@ -4223,6 +4225,7 @@ static void output_dam(int Ind, FILE *fff, object_type *o_ptr, int mult, int mul
 		critical_damage = melee_crit_dam(dam, crit_flat_bonus, allow_skill_crit ? crit_die_size : 0);
 		// expected damage factoring in crits
 		dam = (((long) critical_chance) * critical_damage + (5000L - critical_chance) * dam) / 5000;
+		dam = melee_overflow_damage(p_ptr, dam);
 
 		if (dam > 0) {
 			if (dam % 10) fprintf(fff, "    %d.%d", dam / 10, dam % 10);
@@ -5954,8 +5957,9 @@ bool identify_combo_aux(int Ind, object_type *o_ptr, bool full, int slot, int In
 #endif
 				ca_ptr = " true artifact";
 			} else {
-				if (!is_admin(p_ptr)) ca_ptr = " random artifact";
-				else ca_ptr = format(" random artifact (ap = %d, %d Au)", artifact_power(randart_make(o_ptr)), object_value_real(0, o_ptr));
+				if (!is_admin(p_ptr)) ca_ptr = chaos_artifact_p(o_ptr) ? " Chaos Artifact" : " random artifact";
+				else ca_ptr = format(" %s (ap = %d, %d Au)", chaos_artifact_p(o_ptr) ? "Chaos Artifact" : "random artifact",
+				    artifact_power(randart_make(o_ptr)), object_value_real(0, o_ptr));
 			}
 #ifdef NEW_ID_SCREEN
 		} else ca_ptr = "n artifact";
@@ -6418,7 +6422,7 @@ bool identify_combo_aux(int Ind, object_type *o_ptr, bool full, int slot, int In
 	if (f4 & TR4_CHARGING) ff_print("It regenerates its mana faster.", 4, TR4_CHARGING);
 
 	/* exploding ammo */
-	if (is_ammo(o_ptr->tval) && o_ptr->pval) fprintf(fff, "It explodes with %s.\n", GF_name[o_ptr->pval]);
+	if (ammo_explosive_p(o_ptr)) fprintf(fff, "It explodes with %s.\n", GF_name[o_ptr->pval]);
 
 	/* special artifacts hardcoded - C. Blue */
 	if (o_ptr->tval == TV_POTION2 && o_ptr->sval == SV_POTION2_AMBER
@@ -7534,7 +7538,8 @@ byte get_book_name_color(object_type *o_ptr) {
 
 byte get_attr_from_tval(object_type *o_ptr) {
 	int attr = tval_to_attr[o_ptr->tval];
-	if (artifact_p(o_ptr)) return(true_artifact_p(o_ptr) ? TERM_TRUE_ARTIFACT : TERM_RANDOM_ARTIFACT);
+	if (artifact_p(o_ptr)) return(true_artifact_p(o_ptr) ? TERM_TRUE_ARTIFACT :
+	    chaos_artifact_p(o_ptr) ? TERM_CHAOS_ARTIFACT : TERM_RANDOM_ARTIFACT);
 
 	/* Gift wrappings: Get the attr from sval */
 	if ((o_ptr->tval == TV_SPECIAL || o_ptr->tval == TV_JUNK) && o_ptr->sval >= SV_GIFT_WRAPPING_START && o_ptr->sval <= SV_GIFT_WRAPPING_END) return(k_info[o_ptr->k_idx].d_attr);
